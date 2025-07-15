@@ -93,6 +93,19 @@ body {
   border-bottom: 1px solid rgba(255, 224, 102, 0.2);
 }
 
+.header-content {
+  max-width: 1200px;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 .logo-container {
   display: flex;
   align-items: center;
@@ -1477,4 +1490,68 @@ body {
   max-width: 1600px;
   width: 100%;
   margin: 0 auto;
+}
+
+.hero-content, .hero-content-minimal {
+  margin: 0 auto;
+  max-width: 700px;
+  width: 100%;
+  padding: 0 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .hero-content, .hero-content-minimal {
+    max-width: 90vw;
+    padding: 0 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .hero-content, .hero-content-minimal {
+    max-width: 98vw;
+    padding: 0 0.5rem;
+    font-size: 0.98rem;
+  }
+  .hero-title-modern {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .destinations-scroll {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 1rem;
+  }
+  .categories-list {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .destinations-scroll {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 0.5rem;
+  }
+  .categories-list {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    margin-left: 0;
+    margin-right: 0;
+    gap: 0.5rem;
+  }
 }

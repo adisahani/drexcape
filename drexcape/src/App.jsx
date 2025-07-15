@@ -553,16 +553,18 @@ function App() {
       <ParallaxClouds />
       {/* Header */}
       <header className="header">
-        <div className="logo-container">
-          <img src={drexcapeLogo} alt="Drexcape" className="logo" />
+        <div className="header-content">
+          <div className="logo-container">
+            <img src={drexcapeLogo} alt="Drexcape" className="logo" />
+          </div>
+          <nav className="nav">
+            <a href="#home" className="nav-link">Home</a>
+            <a href="#destinations" className="nav-link">Destinations</a>
+            <a href="#categories" className="nav-link">Categories</a>
+            <a href="#offers" className="nav-link">Offers</a>
+            <a href="#contact" className="nav-link">Contact</a>
+          </nav>
         </div>
-        <nav className="nav">
-          <a href="#home" className="nav-link">Home</a>
-          <a href="#destinations" className="nav-link">Destinations</a>
-          <a href="#categories" className="nav-link">Categories</a>
-          <a href="#offers" className="nav-link">Offers</a>
-          <a href="#contact" className="nav-link">Contact</a>
-        </nav>
       </header>
 
       {/* Hero Section */}
