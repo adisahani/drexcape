@@ -1403,3 +1403,72 @@ body {
   background: #a084e8;
   box-shadow: 0 0 10px rgba(160, 132, 232, 0.5);
 }
+
+/* --- Responsive, swipeable slider for popular destinations/searches --- */
+.slider-container {
+  width: 100vw;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 8px;
+}
+.slider-wrapper, .slider-track {
+  display: flex;
+  flex-direction: row;
+  gap: 1.2rem;
+}
+@media (max-width: 900px) {
+  .destination-card, .category-card {
+    width: 200px;
+    min-width: 160px;
+    max-width: 80vw;
+  }
+  .slider-wrapper, .slider-track {
+    gap: 0.8rem;
+  }
+}
+@media (max-width: 700px) {
+  .slider-container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+  .destination-card, .category-card {
+    width: 80vw;
+    min-width: 70vw;
+    max-width: 90vw;
+  }
+  .slider-wrapper, .slider-track {
+    gap: 0.5rem;
+  }
+}
+/* Hide scrollbars for a cleaner look */
+.slider-container::-webkit-scrollbar {
+  display: none;
+}
+.slider-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.full-width-section {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  overflow-x: visible !important;
+  position: relative;
+  padding: 0;
+}
+
+/* Add to popular-destinations and categories-section */
+.popular-destinations, .categories-section {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin-left: 50%;
+  transform: translateX(-50%);
+  overflow-x: visible !important;
+  position: relative;
+  padding: 0;
+}

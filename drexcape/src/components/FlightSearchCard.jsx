@@ -19,6 +19,20 @@ const FlightSearchCard = () => {
   ]);
   const [showCalendar, setShowCalendar] = React.useState(false);
 
+  // Sample airport list
+  const airportOptions = [
+    { city: 'Delhi', airport: 'Indira Gandhi International Airport', code: 'DEL' },
+    { city: 'Mumbai', airport: 'Chhatrapati Shivaji Maharaj International Airport', code: 'BOM' },
+    { city: 'Bengaluru', airport: 'Kempegowda International Airport', code: 'BLR' },
+    { city: 'Chennai', airport: 'Chennai International Airport', code: 'MAA' },
+    { city: 'Kolkata', airport: 'Netaji Subhas Chandra Bose International Airport', code: 'CCU' },
+    { city: 'Hyderabad', airport: 'Rajiv Gandhi International Airport', code: 'HYD' },
+    { city: 'Goa', airport: 'Goa International Airport', code: 'GOI' },
+    { city: 'Pune', airport: 'Pune Airport', code: 'PNQ' },
+    { city: 'Ahmedabad', airport: 'Sardar Vallabhbhai Patel International Airport', code: 'AMD' },
+    { city: 'Jaipur', airport: 'Jaipur International Airport', code: 'JAI' },
+  ];
+
   const formatDate = (date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
   const formatDay = (date) => date.toLocaleDateString('en-GB', { weekday: 'long' });
 
@@ -27,13 +41,27 @@ const FlightSearchCard = () => {
       {/* From/To Inputs with overlapping swap button */}
       <div className="location-section overlap-layout">
         <div className="location-input-wrap">
-          <LocationInput label="From" value={from} onChange={e => setFrom(e.target.value)} placeholder="From" />
+          <LocationInput
+            label="From"
+            value={from}
+            onChange={e => setFrom(e.target.value)}
+            placeholder="From"
+            options={airportOptions}
+            onSelect={opt => setFrom(`${opt.city} (${opt.code})`)}
+          />
         </div>
         <button className="swap-btn overlap-swap-btn" aria-label="Swap From and To" onClick={() => { const temp = from; setFrom(to); setTo(temp); }}>
           ⇄
         </button>
         <div className="location-input-wrap">
-          <LocationInput label="To" value={to} onChange={e => setTo(e.target.value)} placeholder="To" />
+          <LocationInput
+            label="To"
+            value={to}
+            onChange={e => setTo(e.target.value)}
+            placeholder="To"
+            options={airportOptions}
+            onSelect={opt => setTo(`${opt.city} (${opt.code})`)}
+          />
         </div>
       </div>
       {/* Date Range Picker */}

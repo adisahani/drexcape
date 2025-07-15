@@ -278,3 +278,70 @@
   padding: 8px 8px 0 8px;
   z-index: 100;
 } 
+
+@media (max-width: 700px) {
+  .flight-search-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 4vw;
+    gap: 16px;
+    min-width: 0;
+    max-width: 98vw;
+    margin: 16px auto;
+  }
+  .overlap-layout {
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 0;
+    min-width: 0;
+  }
+  .location-input-wrap {
+    padding: 0;
+    margin-bottom: 16px;
+  }
+  .location-input-wrap:last-child {
+    margin-bottom: 0;
+  }
+  .overlap-swap-btn {
+    position: static;
+    margin: 8px auto 16px auto;
+    left: unset;
+    top: unset;
+    transform: none;
+    width: 36px;
+    height: 36px;
+  }
+  .date-section, .travellers-section {
+    margin-left: 0;
+    margin-top: 8px;
+  }
+  .date-display-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .date-display, .travellers-class-display {
+    min-width: 0;
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 1rem;
+  }
+  .search-btn-section {
+    margin-top: 12px;
+    display: flex;
+    justify-content: center;
+  }
+  .search-btn {
+    width: 100%;
+    padding: 12px 0;
+    font-size: 1.1rem;
+    border-radius: 16px;
+  }
+  .autocomplete-dropdown {
+    left: 0;
+    width: 100vw;
+    min-width: 0;
+    max-width: 100vw;
+    border-radius: 0 0 12px 12px;
+    font-size: 0.98rem;
+  }
+}
