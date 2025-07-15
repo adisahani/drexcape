@@ -213,6 +213,8 @@ function ParallaxClouds() {
   );
 }
 
+
+
 function PopularDestinationsSlider() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const destinations = [
