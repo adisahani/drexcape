@@ -20,6 +20,7 @@ import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import FlightSearchCard from './components/FlightSearchCard';
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -409,6 +410,20 @@ function App() {
   const lastMove = useRef(Date.now())
   const lagRef = useRef(0.18)
 
+  // New state for trip search form
+  const [fromLocation, setFromLocation] = useState("");
+  const [toLocation, setToLocation] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [budget, setBudget] = useState("");
+
+  function handleTripSearch(e) {
+    e.preventDefault();
+    // Placeholder: send data to backend/ChatGPT Nano
+    console.log({ fromLocation, toLocation, startDate, endDate, budget });
+    // TODO: Call backend or ChatGPT Nano here
+  }
+
   useEffect(() => {
     // Liquid, laggy spotlight
     const handleMouseMove = (e) => {
@@ -567,6 +582,17 @@ function App() {
     }
   }, [])
 
+  // Add popular places and budget options to App function
+  const popularPlaces = [
+    "Mumbai", "Delhi", "Goa", "Bangalore", "Jaipur", "Kolkata", "Chennai", "Hyderabad", "Pune", "Manali", "Shimla", "Udaipur"
+  ];
+  const budgetOptions = [
+    { label: "20K – 30K", value: "20000-30000" },
+    { label: "30K – 50K", value: "30000-50000" },
+    { label: "50K – 1L", value: "50000-100000" },
+    { label: "1L+", value: "100000+" }
+  ];
+
   return (
     <div className="app">
       <GooeyCursor />
@@ -611,22 +637,8 @@ function App() {
           <button className="hero-cta-btn gsap-fade-in">
             Plan My Escape <ArrowForwardIosIcon style={{fontSize: '1.1em', marginLeft: '0.5em'}} />
           </button>
-          {/* Deep glassy search bar */}
-          <div className="search-bar-glassy gsap-fade-in">
-            <button className="search-pill search-pill-left">
-              <CategoryOutlinedIcon style={{marginRight: '0.5rem', fontSize: '1.3em', color: '#b0b0c3'}} /> All
-            </button>
-            <input className="search-pill search-input-pill" type="text" placeholder="I'm search" />
-            <button className="search-pill">
-              <LocationOnOutlinedIcon style={{marginRight: '0.5rem', fontSize: '1.3em', color: '#b0b0c3'}} /> All Thailand
-            </button>
-            <button className="search-pill">
-              <AttachMoneyOutlinedIcon style={{marginRight: '0.5rem', fontSize: '1.3em', color: '#b0b0c3'}} /> USD 500 - 10500
-            </button>
-            <button className="search-pill search-btn-pill">
-              <SearchOutlinedIcon style={{fontSize: '1.5em', color: '#fff'}} />
-            </button>
-          </div>
+          {/* Replace glassy trip search form with new FlightSearchCard */}
+          <FlightSearchCard />
         </div>
         <div className="hero-visual">
           {/* Placeholder for hero image or animation */}
