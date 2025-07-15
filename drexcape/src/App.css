@@ -1406,7 +1406,7 @@ body {
 
 /* --- Responsive, swipeable slider for popular destinations/searches --- */
 .slider-container {
-  width: 100vw;
+  width: 1600px;
   margin-left: 50%;
   transform: translateX(-50%);
   overflow-x: auto;
@@ -1453,8 +1453,8 @@ body {
 }
 
 .full-width-section {
-  width: 100vw !important;
-  max-width: 100vw !important;
+  width: 100vw;
+  max-width: 100vw ;
   margin-left: 50%;
   transform: translateX(-50%);
   overflow-x: visible !important;
@@ -1471,4 +1471,10 @@ body {
   overflow-x: visible !important;
   position: relative;
   padding: 0;
+}
+
+.slider-container, .swiper {
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
 }

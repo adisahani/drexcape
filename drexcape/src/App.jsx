@@ -21,6 +21,11 @@ import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import AttachMoneyOutlinedIcon from '@mui/icons-material/AttachMoneyOutlined';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import FlightSearchCard from './components/FlightSearchCard';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, A11y, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -217,7 +222,6 @@ function ParallaxClouds() {
 
 
 function PopularDestinationsSlider() {
-  const [currentSlide, setCurrentSlide] = useState(0);
   const destinations = [
     { id: 1, title: "Forest Wild Life", location: "NRT, Indonesia", rating: "4.7", image: cardImage1 },
     { id: 2, title: "Beach Paradise", location: "Bali, Indonesia", rating: "4.9", image: cardImage2 },
@@ -229,84 +233,35 @@ function PopularDestinationsSlider() {
     { id: 8, title: "Adventure Trail", location: "Nepal", rating: "4.8", image: cardImage2 }
   ];
 
-  const [cardsPerView, setCardsPerView] = useState(4);
-
-  useEffect(() => {
-    const updateCardsPerView = () => {
-      if (window.innerWidth < 768) {
-        setCardsPerView(2); // Mobile
-      } else if (window.innerWidth < 1024) {
-        setCardsPerView(4); // Tablet
-      } else {
-        setCardsPerView(5); // Desktop
-      }
-    };
-
-    updateCardsPerView();
-    window.addEventListener('resize', updateCardsPerView);
-    return () => window.removeEventListener('resize', updateCardsPerView);
-  }, []);
-
-  const totalSlides = Math.ceil(destinations.length / cardsPerView);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % totalSlides);
-    }, 5000); // Auto change every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [totalSlides]);
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % totalSlides);
-  };
-
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
-  };
-
   return (
-    <div className="slider-container">
-      <div className="slider-wrapper">
-        <div 
-          className="slider-track"
-          style={{ 
-            transform: `translateX(-${currentSlide * 100}%)`,
-            transition: 'transform 0.5s ease-in-out'
-          }}
-        >
-          {destinations.map((dest, index) => (
-            <div className="destination-card glass gsap-fade-in" key={dest.id}>
-              <div className="destination-img" style={{backgroundImage: `url(${dest.image})`}} />
-              <div className="destination-info">
-                <h3>{dest.title}</h3>
-                <p>{dest.location}</p>
-                <span className="rating">⭐ {dest.rating}</span>
-              </div>
+    <Swiper
+      modules={[Navigation, Pagination, A11y, Autoplay]}
+      loop={true}
+      slidesPerView={5}
+      spaceBetween={40}
+      slidesPerGroup={2}
+      navigation
+      pagination={{ clickable: true }}
+      autoplay={{ delay: 3000, disableOnInteraction: false }}
+      breakpoints={{
+        900: { slidesPerView: 5, slidesPerGroup: 2, spaceBetween: 40 },
+        700: { slidesPerView: 2, slidesPerGroup: 1, spaceBetween: 16 },
+        0: { slidesPerView: 1, slidesPerGroup: 1, spaceBetween: 8 },
+      }}
+    >
+      {destinations.map(dest => (
+        <SwiperSlide key={dest.id}>
+          <div className="destination-card glass gsap-fade-in">
+            <div className="destination-img" style={{backgroundImage: `url(${dest.image})`}} />
+            <div className="destination-info">
+              <h3>{dest.title}</h3>
+              <p>{dest.location}</p>
+              <span className="rating">⭐ {dest.rating}</span>
             </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Navigation Buttons */}
-      <button className="slider-btn slider-btn-prev" onClick={prevSlide}>
-        <ArrowForwardIosIcon style={{transform: 'rotate(180deg)'}} />
-      </button>
-      <button className="slider-btn slider-btn-next" onClick={nextSlide}>
-        <ArrowForwardIosIcon />
-      </button>
-      
-      {/* Dots Indicator */}
-      <div className="slider-dots">
-        {Array.from({ length: totalSlides }).map((_, index) => (
-          <button
-            key={index}
-            className={`slider-dot ${index === currentSlide ? 'active' : ''}`}
-            onClick={() => setCurrentSlide(index)}
-          />
-        ))}
-      </div>
-    </div>
+          </div>
+        </SwiperSlide>
+      ))}
+    </Swiper>
   );
 }
 
@@ -355,43 +310,30 @@ function PopularSearchesSlider() {
   };
 
   return (
-    <div className="slider-container">
-      <div className="slider-wrapper">
-        <div 
-          className="slider-track"
-          style={{ 
-            transform: `translateX(-${currentSlide * 100}%)`,
-            transition: 'transform 0.5s ease-in-out'
-          }}
-        >
-          {searches.map((search, index) => (
-            <div className="category-card glass gsap-fade-in" key={index}>
-              <span className="category-icon">🌟</span>
-              <span className="category-name">{search}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Navigation Buttons */}
-      <button className="slider-btn slider-btn-prev" onClick={prevSlide}>
-        <ArrowForwardIosIcon style={{transform: 'rotate(180deg)'}} />
-      </button>
-      <button className="slider-btn slider-btn-next" onClick={nextSlide}>
-        <ArrowForwardIosIcon />
-        </button>
-      
-      {/* Dots Indicator */}
-      <div className="slider-dots">
-        {Array.from({ length: totalSlides }).map((_, index) => (
-          <button
-            key={index}
-            className={`slider-dot ${index === currentSlide ? 'active' : ''}`}
-            onClick={() => setCurrentSlide(index)}
-          />
-        ))}
-      </div>
-    </div>
+    <Swiper
+      modules={[Navigation, Pagination, A11y, Autoplay]}
+      loop={true}
+      slidesPerView={5}
+      spaceBetween={40}
+      slidesPerGroup={2}
+      navigation
+      pagination={{ clickable: true }}
+      autoplay={{ delay: 4200, disableOnInteraction: false }}
+      breakpoints={{
+        900: { slidesPerView: 5, slidesPerGroup: 2, spaceBetween: 40 },
+        700: { slidesPerView: 2, slidesPerGroup: 1, spaceBetween: 16 },
+        0: { slidesPerView: 1, slidesPerGroup: 1, spaceBetween: 8 },
+      }}
+    >
+      {searches.map((search, index) => (
+        <SwiperSlide key={index}>
+          <div className="category-card glass gsap-fade-in">
+            <span className="category-icon">🌟</span>
+            <span className="category-name">{search}</span>
+          </div>
+        </SwiperSlide>
+      ))}
+    </Swiper>
   );
 }
 
