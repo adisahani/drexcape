@@ -26,6 +26,8 @@ import { Navigation, Pagination, A11y, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import SearchResults from './components/SearchResults';
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -536,6 +538,9 @@ function App() {
   ];
 
   return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={
     <div className="app">
       <GooeyCursor />
       {/* Glow spotlight under cursor */}
@@ -640,6 +645,10 @@ function App() {
         <p>Powered by <span className="company-name">Dream Place Tour & Travels</span></p>
       </footer>
     </div>
+        } />
+        <Route path="/search-results" element={<SearchResults />} />
+      </Routes>
+    </BrowserRouter>
   )
 }
 

@@ -1,10 +1,12 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import './FlightSearchCard.css';
 import LocationInput from './LocationInput';
 import TravellersClassSelector from './TravellersClassSelector';
 import DateRangePicker from './DateRangePicker';
 
 const FlightSearchCard = () => {
+  const navigate = useNavigate();
   // Placeholder state for From/To
   const [from, setFrom] = React.useState('');
   const [to, setTo] = React.useState('');
@@ -35,6 +37,19 @@ const FlightSearchCard = () => {
 
   const formatDate = (date) => date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
   const formatDay = (date) => date.toLocaleDateString('en-GB', { weekday: 'long' });
+
+  const handleSearch = () => {
+    navigate('/search-results', {
+      state: {
+        from,
+        to,
+        travellers,
+        travelClass,
+        startDate: range[0].startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
+        endDate: range[0].endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
+      },
+    });
+  };
 
   return (
     <div className="flight-search-card">
@@ -96,7 +111,7 @@ const FlightSearchCard = () => {
       </div>
       {/* Search Button */}
       <div className="search-btn-section">
-        <button className="search-btn">Search</button>
+        <button className="search-btn" onClick={handleSearch}>Search</button>
       </div>
     </div>
   );
