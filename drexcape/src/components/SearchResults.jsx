@@ -71,6 +71,58 @@ const SearchResults = () => {
   const [error, setError] = useState('');
   const [aiItineraries, setAiItineraries] = useState([]);
   const [selectedItinerary, setSelectedItinerary] = useState(null);
+  const [imageUrls, setImageUrls] = useState({}); // { idx: url }
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [detailsData, setDetailsData] = useState(null);
+  const [detailsError, setDetailsError] = useState('');
+
+  // Fetch image for a place (Pixabay proxy)
+  const fetchImage = async (place, destination, idx) => {
+    if (!place && !destination) return;
+    try {
+      const res = await fetch(`/api/place-image?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}`);
+      const data = await res.json();
+      setImageUrls(prev => ({ ...prev, [idx]: data.imageUrl || '/default-travel.jpg' }));
+    } catch {
+      setImageUrls(prev => ({ ...prev, [idx]: '/default-travel.jpg' }));
+    }
+  };
+
+  // When aiItineraries change, fetch images for each
+  useEffect(() => {
+    aiItineraries.forEach((item, idx) => {
+      const place = item.placesToVisit?.[0] || '';
+      const destination = item.destinations?.[0] || '';
+      if (!imageUrls[idx]) fetchImage(place, destination, idx);
+    });
+    // eslint-disable-next-line
+  }, [aiItineraries]);
+
+  // Fetch full details for a package
+  const handleViewDetails = async (idx) => {
+    setSelectedItinerary(idx);
+    setDetailsLoading(true);
+    setDetailsError('');
+    setDetailsData(null);
+    const summary = aiItineraries[idx];
+    try {
+      const res = await fetch('/api/itinerary-details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(summary),
+      });
+      const data = await res.json();
+      if (data.details) {
+        setDetailsData(data.details);
+      } else {
+        setDetailsError('No details found.');
+      }
+    } catch {
+      setDetailsError('Failed to fetch details.');
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!from || !to) {
@@ -164,6 +216,20 @@ const SearchResults = () => {
                   overflow: 'hidden',
                   transition: 'box-shadow 0.2s',
                 }}>
+                  {/* Card Image */}
+                  <img
+                    src={imageUrls[idx] || '/default-travel.jpg'}
+                    alt={item.placesToVisit?.[0] || item.destinations?.[0] || 'Travel'}
+                    style={{
+                      width: '100%',
+                      height: 160,
+                      objectFit: 'cover',
+                      borderTopLeftRadius: 18,
+                      borderTopRightRadius: 18,
+                      borderBottom: '1.5px solid #ece6fa',
+                    }}
+                    onError={e => { e.target.onerror = null; e.target.src = '/default-travel.jpg'; }}
+                  />
                   {/* Card Header */}
                   <div style={{
                     background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
@@ -178,8 +244,8 @@ const SearchResults = () => {
                   {/* Card Body */}
                   <div style={{ padding: '18px 20px 10px 20px', flex: 1 }}>
                     <div style={{ fontSize: '1.05rem', marginBottom: 6, color: '#6d3bbd', fontWeight: 700 }}>
-                      <span style={{ marginRight: 12 }}>Days: <span style={{ color: '#222', fontWeight: 600 }}>{item.days}</span></span>
-                      <span>Destinations: <span style={{ color: '#222', fontWeight: 600 }}>{item.destinations?.join(', ')}</span></span>
+                      <span style={{ marginRight: 12 }}>Duration: <span style={{ color: '#222', fontWeight: 600 }}>{item.days} Days</span></span>
+                      <span>Destinations: <span style={{ color: '#222', fontWeight: 600 }}>{item.destinations?.join(', ') || 'N/A'}</span></span>
                     </div>
                     {/* Places to Visit */}
                     {item.placesToVisit && item.placesToVisit.length > 0 && (
@@ -229,7 +295,7 @@ const SearchResults = () => {
                         boxShadow: '0 2px 8px #a084e822',
                         transition: 'background 0.2s, transform 0.2s',
                       }}
-                      onClick={() => setSelectedItinerary(idx)}
+                      onClick={() => handleViewDetails(idx)}
                       onMouseOver={e => e.currentTarget.style.background = 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)'}
                       onMouseOut={e => e.currentTarget.style.background = 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)'}
                     >
@@ -243,15 +309,121 @@ const SearchResults = () => {
             itinerary && <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 16, borderRadius: 8, color: '#222' }}>{itinerary}</pre>
           )}
           {/* Modal for details */}
-          {selectedItinerary !== null && aiItineraries[selectedItinerary] && (
-            <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setSelectedItinerary(null)}>
-              <div style={{ background: '#fff', color: '#222', borderRadius: 14, maxWidth: 600, width: '90vw', padding: 32, boxShadow: '0 8px 32px #a084e888', position: 'relative' }} onClick={e => e.stopPropagation()}>
-                <button style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#a084e8' }} onClick={() => setSelectedItinerary(null)}>&times;</button>
-                <div style={{ fontWeight: 700, fontSize: '1.2rem', marginBottom: 8 }}>{aiItineraries[selectedItinerary].packageName}</div>
-                <div style={{ fontSize: '1rem', marginBottom: 8 }}><b>Days:</b> {aiItineraries[selectedItinerary].days} &nbsp; <b>Destinations:</b> {aiItineraries[selectedItinerary].destinations?.join(', ')}</div>
-                <div style={{ fontSize: '1rem', marginBottom: 8 }}><b>Tour Highlights:</b> <ul style={{ margin: 0, paddingLeft: 18 }}>{aiItineraries[selectedItinerary].highlights?.map((h, i) => <li key={i}>{h}</li>)}</ul></div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 600, color: '#a084e8', margin: '8px 0' }}>₹{aiItineraries[selectedItinerary].price?.toLocaleString()}</div>
-                <div style={{ marginTop: 18 }}><ReactMarkdown>{aiItineraries[selectedItinerary].details}</ReactMarkdown></div>
+          {selectedItinerary !== null && (
+            <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.45)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => { setSelectedItinerary(null); setDetailsData(null); }}>
+              <div style={{ background: '#fff', color: '#222', borderRadius: 14, maxWidth: 700, width: '95vw', padding: 32, boxShadow: '0 8px 32px #a084e888', position: 'relative', minHeight: 320 }} onClick={e => e.stopPropagation()}>
+                <button style={{ position: 'absolute', top: 12, right: 16, background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#a084e8' }} onClick={() => { setSelectedItinerary(null); setDetailsData(null); }}>&times;</button>
+                {detailsLoading && <div style={{ fontSize: 18, color: '#a084e8', textAlign: 'center', marginTop: 40 }}>Loading details...</div>}
+                {detailsError && <div style={{ color: 'red', marginTop: 24 }}>{detailsError}</div>}
+                {detailsData && (
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1.4rem', marginBottom: 12, color: '#6d3bbd' }}>{detailsData.title}</div>
+                    
+                    {/* Basic Info */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20, fontSize: '1.05rem' }}>
+                      <div><b>📅 Dates:</b> {detailsData.dates || 'N/A'}</div>
+                      <div><b>⏱️ Duration:</b> {detailsData.duration || 'N/A'}</div>
+                      <div><b>🛫 From:</b> {detailsData.from || 'N/A'}</div>
+                      <div><b>🛬 To:</b> {detailsData.to || 'N/A'}</div>
+                      <div><b>💰 Price:</b> {detailsData.priceEstimate || 'N/A'}</div>
+                      <div><b>✈️ Class:</b> {detailsData.transportClass || 'N/A'}</div>
+                    </div>
+
+                    {/* Highlights */}
+                    {detailsData.highlights && Array.isArray(detailsData.highlights) && detailsData.highlights.length > 0 && (
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontWeight: 700, color: '#a084e8', fontSize: '1.1rem', marginBottom: 8 }}>🌟 Tour Highlights:</div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                          {detailsData.highlights.map((highlight, i) => (
+                            <span key={i} style={{
+                              background: 'linear-gradient(90deg, #f5e6ff 0%, #ece6fa 100%)',
+                              color: '#6d3bbd',
+                              borderRadius: 8,
+                              padding: '4px 12px',
+                              fontSize: '0.95rem',
+                              fontWeight: 600,
+                            }}>{highlight}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Day-wise Plan */}
+                    {detailsData.fullDayWisePlan && Array.isArray(detailsData.fullDayWisePlan) && (
+                      <div style={{ marginBottom: 20 }}>
+                        <div style={{ fontWeight: 700, color: '#a084e8', fontSize: '1.1rem', marginBottom: 12 }}>📋 Complete Day-wise Plan:</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          {detailsData.fullDayWisePlan.map((day, i) => (
+                            <div key={i} style={{
+                              background: '#fafafd',
+                              borderRadius: 8,
+                              padding: 12,
+                              border: '1px solid #ece6fa'
+                            }}>
+                              <div style={{ fontWeight: 700, color: '#6d3bbd', marginBottom: 4 }}>
+                                {day.emoji} {day.title}
+                              </div>
+                              <div style={{ color: '#222', fontSize: '0.95rem' }}>{day.description}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Practical Info */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                      {detailsData.accommodation && (
+                        <div style={{ background: '#f5e6ff', padding: 12, borderRadius: 8, border: '1px solid #ece6fa' }}>
+                          <div style={{ fontWeight: 700, color: '#6d3bbd', marginBottom: 4 }}>🏨 Accommodation</div>
+                          <div style={{ fontSize: '0.95rem', color: '#222' }}>{detailsData.accommodation}</div>
+                        </div>
+                      )}
+                      {detailsData.transportDetails && (
+                        <div style={{ background: '#f5e6ff', padding: 12, borderRadius: 8, border: '1px solid #ece6fa' }}>
+                          <div style={{ fontWeight: 700, color: '#6d3bbd', marginBottom: 4 }}>✈️ Transport</div>
+                          <div style={{ fontSize: '0.95rem', color: '#222' }}>{detailsData.transportDetails}</div>
+                        </div>
+                      )}
+                      {detailsData.activitiesIncluded && (
+                        <div style={{ background: '#f5e6ff', padding: 12, borderRadius: 8, border: '1px solid #ece6fa' }}>
+                          <div style={{ fontWeight: 700, color: '#6d3bbd', marginBottom: 4 }}>🎟️ Activities Included</div>
+                          <div style={{ fontSize: '0.95rem', color: '#222' }}>{detailsData.activitiesIncluded}</div>
+                        </div>
+                      )}
+                      {detailsData.meals && (
+                        <div style={{ background: '#f5e6ff', padding: 12, borderRadius: 8, border: '1px solid #ece6fa' }}>
+                          <div style={{ fontWeight: 700, color: '#6d3bbd', marginBottom: 4 }}>🍽️ Meals</div>
+                          <div style={{ fontSize: '0.95rem', color: '#222' }}>{detailsData.meals}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Terms */}
+                    {detailsData.terms && (
+                      <div style={{ marginBottom: 16 }}>
+                        <div style={{ fontWeight: 700, color: '#a084e8', marginBottom: 4 }}>✅ Terms & Conditions</div>
+                        <div style={{ fontSize: '0.95rem', color: '#222', background: '#fafafd', padding: 8, borderRadius: 6 }}>{detailsData.terms}</div>
+                      </div>
+                    )}
+
+                    {/* Booking CTA */}
+                    {detailsData.bookingLink && (
+                      <div style={{ textAlign: 'center', marginTop: 20 }}>
+                        <a href={detailsData.bookingLink} target="_blank" rel="noopener noreferrer" style={{
+                          color: '#fff',
+                          background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
+                          padding: '12px 24px',
+                          borderRadius: 8,
+                          textDecoration: 'none',
+                          fontWeight: 700,
+                          fontSize: '1.1rem',
+                          display: 'inline-block',
+                          boxShadow: '0 4px 12px #a084e844'
+                        }}>📞 Contact Us to Book Now!</a>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
