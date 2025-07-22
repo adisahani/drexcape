@@ -7,22 +7,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Previous Mistral model and key for reuse:
-// const MISTRAL_MODEL = 'mistralai/mistral-small-3.1-24b-instruct:free';
-// const MISTRAL_API_KEY = process.env.MISTRAL_API_KEY;
-// Previous Llama model and key for reuse:
-// const LLAMA_MODEL = 'meta-llama/llama-3.3-70b-instruct:free';
-// const LLAMA_API_KEY = process.env.LLAMA_API_KEY;
-// Previous Gemini model and key for reuse:
-// const GEMINI_MODEL = 'google/gemini-2.0-flash-exp:free';
-// const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-// Previous Gemini Flash model and key for reuse:
-// const GEMINI_FLASH_MODEL = 'google/gemini-flash-1.5';
-// const GEMINI_FLASH_API_KEY = process.env.GEMINI_FLASH_API_KEY;
-
-const DEEPSEEK_MODEL = 'deepseek/deepseek-chat-v3-0324:free';
-const DEEPSEEK_API_KEY = process.env.OPENROUTER_API_KEY;
+// Remove all previous model configs and keys
+const GEMINI_25_FLASH_LITE_API_KEY = process.env.GEMINI_25_FLASH_LITE_API_KEY;
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
 app.post('/api/generate-itinerary', async (req, res) => {
   const { from, to, departureDate, returnDate, travellers, travelClass } = req.body;
@@ -32,7 +19,14 @@ app.post('/api/generate-itinerary', async (req, res) => {
   const endDate = new Date(returnDate);
   const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
+  // userPrompt construction remains unchanged
   const userPrompt = `You are an experienced travel agent. Create 5 complete, practical travel itinerary packages for a ${days}-day trip from ${from} to ${to} for ${travellers} ${travelClass} travelers.
+
+Each package price must be realistic and based on the following assumptions:
+- Domestic return flight: INR 10,000–15,000 per person.
+- Hotel stay: INR 5,000 per night for budget, INR 10,000 per night for luxury.
+- Meals and activities: Add INR 2,000–5,000 per day per person.
+The total price should match these estimates for the total days and travelers.
 
 **Your format must include for each package:**
 1️⃣ **Day-wise plan:** Each day with clear heading + bullet points for activities (Morning/Afternoon/Evening if needed).
@@ -67,40 +61,29 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
 
   try {
     const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
+      GEMINI_API_URL,
       {
-        model: DEEPSEEK_MODEL,
-        messages: [
+        contents: [
           {
             role: 'user',
-            content: userPrompt,
-          },
-        ],
+            parts: [{ text: userPrompt }]
+          }
+        ]
       },
       {
         headers: {
-          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
           'Content-Type': 'application/json',
         },
+        params: {
+          key: GEMINI_25_FLASH_LITE_API_KEY
+        }
       }
     );
-    
-    console.log('AI Prompt sent:', userPrompt);
-    
-    // Try to parse the AI response as JSON
-    let json = null;
-    try {
-      let content = response.data.choices?.[0]?.message?.content || '';
-      // Remove markdown code block markers and trim
-      let jsonString = content.replace(/```json|```/g, '').trim();
-      // Extract the first array or object
-      const match = jsonString.match(/\[.*\]|\{.*\}/s);
-      if (match) jsonString = match[0];
-      json = JSON.parse(jsonString);
-    } catch (e) {
-      console.error('Failed to parse AI JSON:', e);
-      return res.status(500).json({ error: 'AI did not return valid JSON.' });
-    }
+    let content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let jsonString = content.replace(/```json|```/g, '').trim();
+    const match = jsonString.match(/\[.*\]|\{.*\}/s);
+    if (match) jsonString = match[0];
+    let json = JSON.parse(jsonString);
     res.json({ itineraries: json });
   } catch (error) {
     console.error(error?.response?.data || error);
@@ -111,6 +94,8 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
 // Endpoint for full itinerary details (on demand)
 app.post('/api/itinerary-details', async (req, res) => {
   const { title, days, destinations, placesToVisit, highlights, price, from, to, dates, transportClass } = req.body;
+
+  // userPrompt construction remains unchanged
   const userPrompt = `You are an experienced travel agent. Create a complete, day-wise, practical travel itinerary for ${days} days for a trip from ${from} to ${to} (${destinations?.join(', ')}) for a ${transportClass} traveler.
 
 **Your format must include:**
@@ -176,40 +161,29 @@ Return ONLY valid JSON. Do not include any explanation, comments, or markdown co
 
   try {
     const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
+      GEMINI_API_URL,
       {
-        model: DEEPSEEK_MODEL,
-        messages: [
+        contents: [
           {
             role: 'user',
-            content: userPrompt,
-          },
-        ],
+            parts: [{ text: userPrompt }]
+          }
+        ]
       },
       {
         headers: {
-          Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
           'Content-Type': 'application/json',
         },
+        params: {
+          key: GEMINI_25_FLASH_LITE_API_KEY
+        }
       }
     );
-    
-    console.log('AI Details Prompt sent:', userPrompt);
-    
-    // Try to parse the AI response as JSON
-    let json = null;
-    try {
-      let content = response.data.choices?.[0]?.message?.content || '';
-      // Remove markdown code block markers and trim
-      let jsonString = content.replace(/```json|```/g, '').trim();
-      // Extract the first object
-      const match = jsonString.match(/\{.*\}/s);
-      if (match) jsonString = match[0];
-      json = JSON.parse(jsonString);
-    } catch (e) {
-      console.error('Failed to parse AI JSON:', e);
-      return res.status(500).json({ error: 'AI did not return valid JSON.' });
-    }
+    let content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let jsonString = content.replace(/```json|```/g, '').trim();
+    const match = jsonString.match(/\{.*\}/s);
+    if (match) jsonString = match[0];
+    let json = JSON.parse(jsonString);
     res.json({ details: json });
   } catch (error) {
     console.error(error?.response?.data || error);
