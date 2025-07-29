@@ -2,10 +2,25 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const connectDB = require('./config/db');
+
+// Connect to MongoDB (only if MONGODB_URI is provided)
+if (process.env.MONGODB_URI) {
+  connectDB();
+} else {
+  console.log('⚠️  MONGODB_URI not found. Admin features will not work.');
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Import routes
+const adminAuthRoutes = require('./routes/adminAuth');
+const adminDashboardRoutes = require('./routes/adminDashboard');
+
+// Import middleware
+const { trackAIUsage } = require('./middleware/aiUsageTracker');
 
 // Remove all previous model configs and keys
 const GEMINI_25_FLASH_LITE_API_KEY = process.env.GEMINI_25_FLASH_LITE_API_KEY;
@@ -192,7 +207,7 @@ Return ONLY valid JSON. Do not include any explanation, comments, or markdown co
 });
 
 // Pixabay image proxy endpoint
-app.get('/api/place-image', async (req, res) => {
+app.get('/api/place-image', trackAIUsage('place-image'), async (req, res) => {
   let place = req.query.place || '';
   let destination = req.query.destination || '';
   const PIXABAY_API_KEY = process.env.PIXABAY_API_KEY;
@@ -223,5 +238,22 @@ app.get('/api/place-image', async (req, res) => {
   }
 });
 
+// Test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ message: 'Server is running!', timestamp: new Date().toISOString() });
+});
+
+// Admin routes
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/dashboard', adminDashboardRoutes);
+
 const PORT = 3001;
-app.listen(PORT, () => console.log(`Backend running on port ${PORT}`)); 
+app.listen(PORT, () => {
+  console.log(`🚀 Backend running on port ${PORT}`);
+  console.log(`📊 Test endpoint: http://localhost:${PORT}/api/test`);
+  if (!process.env.MONGODB_URI) {
+    console.log('⚠️  MongoDB not configured. Admin features disabled.');
+  } else {
+    console.log('✅ MongoDB configured. Admin features enabled.');
+  }
+}); 

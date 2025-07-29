@@ -28,6 +28,8 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import SearchResults from './components/SearchResults';
+import AdminLogin from './components/AdminLogin';
+import AdminDashboard from './components/AdminDashboard';
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -340,6 +342,31 @@ function PopularSearchesSlider() {
 }
 
 function App() {
+  // Admin state
+  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+  const [adminData, setAdminData] = useState(null);
+
+  // Check if admin is logged in on component mount
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    const storedAdminData = localStorage.getItem('adminData');
+    
+    if (token && storedAdminData) {
+      setIsAdminLoggedIn(true);
+      setAdminData(JSON.parse(storedAdminData));
+    }
+  }, []);
+
+  const handleAdminLogin = (loginData) => {
+    setIsAdminLoggedIn(true);
+    setAdminData(loginData.admin);
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdminLoggedIn(false);
+    setAdminData(null);
+  };
+
   // Spotlight effect
   const spotlightRef = useRef(null)
   const heroRef = useRef(null)
@@ -540,6 +567,13 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/admin" element={
+          isAdminLoggedIn ? (
+            <AdminDashboard onLogout={handleAdminLogout} />
+          ) : (
+            <AdminLogin onLoginSuccess={handleAdminLogin} />
+          )
+        } />
         <Route path="/" element={
     <div className="app">
       <GooeyCursor />

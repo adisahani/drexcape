@@ -5,7 +5,7 @@ import LocationInput from './LocationInput';
 import TravellersClassSelector from './TravellersClassSelector';
 import DateRangePicker from './DateRangePicker';
 
-const FlightSearchCard = () => {
+const FlightSearchCard = ({ onSearchWithUserData }) => {
   const navigate = useNavigate();
   // Placeholder state for From/To
   const [from, setFrom] = React.useState('');
@@ -39,16 +39,23 @@ const FlightSearchCard = () => {
   const formatDay = (date) => date.toLocaleDateString('en-GB', { weekday: 'long' });
 
   const handleSearch = () => {
-    navigate('/search-results', {
-      state: {
-        from,
-        to,
-        travellers,
-        travelClass,
-        startDate: range[0].startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
-        endDate: range[0].endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
-      },
-    });
+    const searchParams = {
+      from,
+      to,
+      travellers,
+      travelClass,
+      departureDate: range[0].startDate,
+      returnDate: range[0].endDate,
+      startDate: range[0].startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
+      endDate: range[0].endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
+    };
+
+    if (onSearchWithUserData) {
+      onSearchWithUserData(searchParams);
+    } else {
+      // Fallback to direct navigation
+      navigate('/search-results', { state: searchParams });
+    }
   };
 
   return (
