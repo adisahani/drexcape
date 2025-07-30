@@ -18,15 +18,22 @@ app.use(express.json());
 // Import routes
 const adminAuthRoutes = require('./routes/adminAuth');
 const adminDashboardRoutes = require('./routes/adminDashboard');
+const userRoutes = require('./routes/users');
+const itineraryRoutes = require('./routes/itineraries');
 
 // Import middleware
 const { trackAIUsage } = require('./middleware/aiUsageTracker');
+
+// Import models
+const Itinerary = require('./models/Itinerary');
+const ItineraryDetails = require('./models/ItineraryDetails');
 
 // Remove all previous model configs and keys
 const GEMINI_25_FLASH_LITE_API_KEY = process.env.GEMINI_25_FLASH_LITE_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
-app.post('/api/generate-itinerary', async (req, res) => {
+// Generate and save basic itineraries
+app.post('/api/generate-itinerary', trackAIUsage('generate-itinerary'), async (req, res) => {
   const { from, to, departureDate, returnDate, travellers, travelClass } = req.body;
 
   // Calculate days from dates
@@ -94,24 +101,99 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
         }
       }
     );
+    
     let content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     let jsonString = content.replace(/```json|```/g, '').trim();
     const match = jsonString.match(/\[.*\]|\{.*\}/s);
     if (match) jsonString = match[0];
     let json = JSON.parse(jsonString);
-    res.json({ itineraries: json });
+
+    // Save each itinerary to database
+    const savedItineraries = [];
+    for (const pkg of json) {
+      try {
+        // Fetch image for this itinerary
+        let headerImage = '/default-travel.jpg';
+        try {
+          const place = pkg.placesToVisit?.[0] || '';
+          const destination = pkg.destinations?.[0] || '';
+          if (place || destination) {
+            const imageResponse = await fetch(`https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY}&q=${encodeURIComponent(place || destination)}&image_type=photo&orientation=horizontal&safesearch=true&per_page=1`);
+            const imageData = await imageResponse.json();
+            if (imageData.hits && imageData.hits.length > 0) {
+              headerImage = imageData.hits[0].webformatURL;
+            }
+          }
+        } catch (imageError) {
+          console.log('Failed to fetch image, using default');
+        }
+
+        const itinerary = new Itinerary({
+          title: pkg.packageName,
+          days: pkg.days,
+          destinations: pkg.destinations,
+          placesToVisit: pkg.placesToVisit,
+          highlights: pkg.highlights,
+          price: pkg.price,
+          fromLocation: from,
+          toLocation: to,
+          departureDate: startDate,
+          returnDate: endDate,
+          travelers: travellers,
+          travelClass: travelClass,
+          headerImage: headerImage
+        });
+        
+        await itinerary.save();
+        savedItineraries.push({
+          id: itinerary._id,
+          slug: itinerary.slug,
+          itineraryId: itinerary.itineraryId,
+          headerImage: headerImage,
+          ...pkg
+        });
+      } catch (saveError) {
+        console.error('Error saving itinerary to database:', saveError);
+        // If database save fails, still return the itinerary data
+        // but with temporary IDs so the frontend can still work
+        savedItineraries.push({
+          id: `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          slug: `temp-slug-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          itineraryId: `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          headerImage: '/default-travel.jpg',
+          ...pkg
+        });
+      }
+    }
+
+    res.json({ 
+      itineraries: savedItineraries,
+      message: 'Itineraries generated and saved successfully'
+    });
   } catch (error) {
     console.error(error?.response?.data || error);
     res.status(500).json({ error: error.toString() });
   }
 });
 
-// Endpoint for full itinerary details (on demand)
-app.post('/api/itinerary-details', async (req, res) => {
-  const { title, days, destinations, placesToVisit, highlights, price, from, to, dates, transportClass } = req.body;
-
-  // userPrompt construction remains unchanged
-  const userPrompt = `You are an experienced travel agent. Create a complete, day-wise, practical travel itinerary for ${days} days for a trip from ${from} to ${to} (${destinations?.join(', ')}) for a ${transportClass} traveler.
+// Generate and save detailed itinerary on demand
+app.get('/api/itinerary-details/:id', trackAIUsage('itinerary-details'), async (req, res) => {
+  try {
+    const itinerary = await Itinerary.findById(req.params.id);
+    
+    if (!itinerary) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+    
+    // Check if details already exist
+    let details = await ItineraryDetails.findOne({ itineraryId: req.params.id });
+    
+    if (details) {
+      return res.json({ details });
+    }
+    
+    // Generate new details if not exists
+    const userPrompt = `You are an experienced travel agent. Create a complete, day-wise, practical travel itinerary for ${itinerary.days} days for a trip from ${itinerary.fromLocation} to ${itinerary.toLocation} (${itinerary.destinations?.join(', ')}) for a ${itinerary.travelClass} traveler.
 
 **Your format must include:**
 1️⃣ **Day-wise plan:** Each day with clear heading + bullet points for activities (Morning/Afternoon/Evening if needed).
@@ -139,42 +221,19 @@ Return a JSON object with these exact fields:
 - terms (string, e.g. "Price inclusive of taxes")
 - bookingLink (string, e.g. "https://yourbooking.com/package/123")
 
-**Format Example:**
-{
-  "title": "2-Day Delhi Explorer",
-  "dates": "19–20 July 2025",
-  "duration": "2 Days, 1 Night",
-  "from": "Kolkata",
-  "to": "Delhi",
-  "priceEstimate": "₹5,200 per person",
-  "highlights": ["Red Fort", "Street food tour", "Hotel stay"],
-  "transportClass": "Economy",
-  "fullDayWisePlan": [
-    { "title": "Day 1: Arrival & Red Fort", "description": "Morning flight, check-in, visit Red Fort, dinner at local restaurant.", "emoji": "🏰" },
-    { "title": "Day 2: Markets & Departure", "description": "Breakfast, Chandni Chowk shopping, return flight.", "emoji": "🛍️" }
-  ],
-  "accommodation": "1-night stay at Hotel XYZ, CP",
-  "activitiesIncluded": "Sightseeing tickets, guided tours",
-  "transportDetails": "IndiGo 6E-203, Economy",
-  "meals": "Breakfast included",
-  "terms": "Price inclusive of GST, subject to availability.",
-  "bookingLink": "https://yourbooking.com/package/123"
-}
-
 Package summary to work with:
-Title: ${title}
-Days: ${days}
-Destinations: ${destinations?.join(', ')}
-Places to Visit: ${placesToVisit?.join(', ')}
-Highlights: ${highlights?.join(', ')}
-Price: ${price}
-From: ${from}
-To: ${to}
-Transport Class: ${transportClass}
+Title: ${itinerary.title}
+Days: ${itinerary.days}
+Destinations: ${itinerary.destinations?.join(', ')}
+Places to Visit: ${itinerary.placesToVisit?.join(', ')}
+Highlights: ${itinerary.highlights?.join(', ')}
+Price: ${itinerary.price}
+From: ${itinerary.fromLocation}
+To: ${itinerary.toLocation}
+Transport Class: ${itinerary.travelClass}
 
 Return ONLY valid JSON. Do not include any explanation, comments, or markdown code blocks. All property names and strings must use double quotes.`;
 
-  try {
     const response = await axios.post(
       GEMINI_API_URL,
       {
@@ -194,15 +253,125 @@ Return ONLY valid JSON. Do not include any explanation, comments, or markdown co
         }
       }
     );
+    
     let content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     let jsonString = content.replace(/```json|```/g, '').trim();
     const match = jsonString.match(/\{.*\}/s);
     if (match) jsonString = match[0];
     let json = JSON.parse(jsonString);
-    res.json({ details: json });
+    
+    // Save detailed itinerary to database
+    details = new ItineraryDetails({
+      itineraryId: req.params.id,
+      title: json.title,
+      dates: json.dates,
+      duration: json.duration,
+      priceEstimate: json.priceEstimate,
+      transportClass: json.transportClass,
+      fullDayWisePlan: json.fullDayWisePlan,
+      accommodation: json.accommodation,
+      activitiesIncluded: json.activitiesIncluded,
+      transportDetails: json.transportDetails,
+      meals: json.meals,
+      terms: json.terms,
+      bookingLink: json.bookingLink
+    });
+    
+    await details.save();
+    
+    res.json({ details });
   } catch (error) {
     console.error(error?.response?.data || error);
     res.status(500).json({ error: error.toString() });
+  }
+});
+
+// CRUD Operations for Itineraries
+
+// Get all itineraries (for admin)
+app.get('/api/itineraries', async (req, res) => {
+  try {
+    const itineraries = await Itinerary.find().sort({ createdAt: -1 });
+    res.json({ itineraries });
+  } catch (error) {
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get single itinerary by ID
+app.get('/api/itinerary/:id', async (req, res) => {
+  try {
+    const itinerary = await Itinerary.findById(req.params.id);
+    if (!itinerary) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+    res.json({ itinerary });
+  } catch (error) {
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Update itinerary
+app.put('/api/itinerary/:id', async (req, res) => {
+  try {
+    const { title, days, price, highlights } = req.body;
+    
+    const itinerary = await Itinerary.findByIdAndUpdate(
+      req.params.id,
+      { 
+        title, 
+        days, 
+        price, 
+        highlights,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+    
+    if (!itinerary) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+    
+    res.json({ success: true, itinerary });
+  } catch (error) {
+    res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+// Delete itinerary
+app.delete('/api/itinerary/:id', async (req, res) => {
+  try {
+    const itinerary = await Itinerary.findByIdAndDelete(req.params.id);
+    if (!itinerary) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+    
+    // Also delete associated details
+    await ItineraryDetails.findOneAndDelete({ itineraryId: req.params.id });
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Delete failed' });
+  }
+});
+
+// Increment view count
+app.post('/api/itinerary/:id/view', async (req, res) => {
+  try {
+    await Itinerary.findByIdAndUpdate(req.params.id, { $inc: { views: 1 } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update view count' });
+  }
+});
+
+// Increment share count
+app.post('/api/itinerary/:id/share', async (req, res) => {
+  try {
+    await Itinerary.findByIdAndUpdate(req.params.id, { $inc: { shares: 1 } });
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update share count' });
   }
 });
 
@@ -246,6 +415,12 @@ app.get('/api/test', (req, res) => {
 // Admin routes
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/dashboard', adminDashboardRoutes);
+
+// User routes
+app.use('/api/users', userRoutes);
+
+// Itinerary routes
+app.use('/api/itineraries', itineraryRoutes);
 
 const PORT = 3001;
 app.listen(PORT, () => {

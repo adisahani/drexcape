@@ -30,6 +30,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import SearchResults from './components/SearchResults';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
+import ItineraryDetailPage from './components/ItineraryDetailPage';
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -681,6 +682,7 @@ function App() {
     </div>
         } />
         <Route path="/search-results" element={<SearchResults />} />
+        <Route path="/itinerary/:slug" element={<ItineraryDetailPage />} />
       </Routes>
     </BrowserRouter>
   )

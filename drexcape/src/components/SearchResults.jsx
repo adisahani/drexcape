@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 import drexcapeLogo from '../assets/drexcape-logo.png';
 import ReactMarkdown from 'react-markdown';
+import { Typography, Button } from '@mui/material'; // Added Typography and Button imports
 
 function GooeyCursor() {
   const containerRef = useRef(null);
@@ -59,12 +60,29 @@ const SearchResults = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state || {};
-  const [from] = useState(state.from || '');
-  const [to] = useState(state.to || '');
-  const [travellers] = useState(state.travellers || 1);
-  const [travelClass] = useState(state.travelClass || 'Economy');
-  const [startDate] = useState(state.startDate || '');
-  const [endDate] = useState(state.endDate || '');
+  
+  // Get search parameters from state or localStorage
+  const getSearchParams = () => {
+    const savedParams = localStorage.getItem('drexcape_search_params');
+    if (savedParams) {
+      return JSON.parse(savedParams);
+    }
+    return {
+      from: state.from || '',
+      to: state.to || '',
+      travellers: state.travellers || 1,
+      travelClass: state.travelClass || 'Economy',
+      startDate: state.startDate || '',
+      endDate: state.endDate || ''
+    };
+  };
+
+  const [from] = useState(getSearchParams().from);
+  const [to] = useState(getSearchParams().to);
+  const [travellers] = useState(getSearchParams().travellers);
+  const [travelClass] = useState(getSearchParams().travelClass);
+  const [startDate] = useState(getSearchParams().startDate);
+  const [endDate] = useState(getSearchParams().endDate);
 
   const [itinerary, setItinerary] = useState('');
   const [loading, setLoading] = useState(false);
@@ -75,6 +93,91 @@ const SearchResults = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsData, setDetailsData] = useState(null);
   const [detailsError, setDetailsError] = useState('');
+  const [itinerarySlug, setItinerarySlug] = useState(null); // New state for itinerary slug
+  const [resultsFromCache, setResultsFromCache] = useState(false);
+  const [hasCachedResults, setHasCachedResults] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [retryDelay, setRetryDelay] = useState(2000); // Start with 2 seconds
+
+  // Save search parameters to localStorage
+  useEffect(() => {
+    const searchParams = { from, to, travellers, travelClass, startDate, endDate };
+    localStorage.setItem('drexcape_search_params', JSON.stringify(searchParams));
+  }, [from, to, travellers, travelClass, startDate, endDate]);
+
+  // Load saved itineraries from localStorage on component mount
+  useEffect(() => {
+    console.log('SearchResults - Component mount, checking for cached results...');
+    const savedItineraries = localStorage.getItem('drexcape_search_results');
+    const savedParams = localStorage.getItem('drexcape_search_params');
+    
+    if (savedItineraries && savedParams) {
+      try {
+        const parsed = JSON.parse(savedItineraries);
+        const parsedParams = JSON.parse(savedParams);
+        
+        // Check if cached results match current search parameters
+        const currentParams = { from, to, travellers, travelClass, startDate, endDate };
+        const paramsMatch = JSON.stringify(currentParams) === JSON.stringify(parsedParams);
+        
+        console.log('SearchResults - Current params:', currentParams);
+        console.log('SearchResults - Cached params:', parsedParams);
+        console.log('SearchResults - Params match:', paramsMatch);
+        
+        if (parsed.itineraries && parsed.itineraries.length > 0 && paramsMatch) {
+          console.log('SearchResults - Found matching cached results:', parsed.itineraries.length, 'itineraries');
+          setAiItineraries(parsed.itineraries || []);
+          setImageUrls(parsed.imageUrls || {});
+          setResultsFromCache(true);
+          setHasCachedResults(true);
+          console.log('SearchResults - Cached results loaded successfully');
+        } else {
+          console.log('SearchResults - No matching cached results found');
+          setHasCachedResults(false);
+        }
+      } catch (error) {
+        console.error('SearchResults - Error loading saved itineraries:', error);
+        setHasCachedResults(false);
+      }
+    } else {
+      console.log('SearchResults - No cached results found');
+      setHasCachedResults(false);
+    }
+  }, [from, to, travellers, travelClass, startDate, endDate]);
+
+  // Handle saved state when coming back from itinerary details
+  useEffect(() => {
+    console.log('SearchResults - Location state changed:', location.state);
+    if (location.state?.fromSaved && location.state?.searchResults) {
+      try {
+        const { itineraries, imageUrls: savedImageUrls } = location.state.searchResults;
+        if (itineraries && itineraries.length > 0) {
+          console.log('SearchResults - Restoring from navigation state:', itineraries.length, 'itineraries');
+          setAiItineraries(itineraries || []);
+          setImageUrls(savedImageUrls || {});
+          setResultsFromCache(true);
+          setHasCachedResults(true);
+          console.log('SearchResults - Navigation state restored successfully');
+        } else {
+          console.log('SearchResults - No valid itineraries in navigation state');
+        }
+      } catch (error) {
+        console.error('SearchResults - Error restoring search results:', error);
+      }
+    }
+  }, [location.state]);
+
+  // Save itineraries to localStorage whenever they change
+  useEffect(() => {
+    if (aiItineraries.length > 0) {
+      const dataToSave = {
+        itineraries: aiItineraries,
+        imageUrls: imageUrls,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('drexcape_search_results', JSON.stringify(dataToSave));
+    }
+  }, [aiItineraries, imageUrls]);
 
   // Fetch image for a place (Pixabay proxy)
   const fetchImage = async (place, destination, idx) => {
@@ -99,63 +202,159 @@ const SearchResults = () => {
   }, [aiItineraries]);
 
   // Fetch full details for a package
-  const handleViewDetails = async (idx) => {
-    setSelectedItinerary(idx);
-    setDetailsLoading(true);
-    setDetailsError('');
-    setDetailsData(null);
-    const summary = aiItineraries[idx];
-    try {
-      const res = await fetch('/api/itinerary-details', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(summary),
-      });
-      const data = await res.json();
-      if (data.details) {
-        setDetailsData(data.details);
-      } else {
-        setDetailsError('No details found.');
-      }
-    } catch {
-      setDetailsError('Failed to fetch details.');
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (!from || !to) {
       navigate('/');
       return;
     }
+    
+    // Skip generation if we have cached results
+    if (hasCachedResults) {
+      console.log('Skipping generation - using cached results');
+      setLoading(false);
+      return;
+    }
+    
+    console.log('Generating new itineraries...');
     setLoading(true);
     setError('');
     setItinerary('');
     setAiItineraries([]);
-    fetch('http://localhost:3001/api/generate-itinerary', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from,
-        to,
-        departureDate: startDate,
-        returnDate: endDate,
-        travellers,
-        travelClass,
-      }),
-    })
-      .then(res => res.json())
-      .then(data => {
+    setItinerarySlug(null); // Reset slug on new search
+    setResultsFromCache(false); // Reset cache flag for new search
+    
+    const generateItinerary = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/generate-itinerary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            from,
+            to,
+            departureDate: startDate,
+            returnDate: endDate,
+            travellers,
+            travelClass,
+          }),
+        });
+        
+        const data = await response.json();
+        
+        // Check for 503 model overload error
+        if (data.error && data.error.code === 503) {
+          console.log('Model overloaded, retrying in', retryDelay, 'ms...');
+          setError(`AI model is temporarily overloaded. Retrying in ${retryDelay/1000} seconds... (Attempt ${retryCount + 1}/3)`);
+          
+          if (retryCount < 2) { // Max 3 attempts
+            setTimeout(() => {
+              setRetryCount(prev => prev + 1);
+              setRetryDelay(prev => prev * 2); // Exponential backoff
+              generateItinerary(); // Retry
+            }, retryDelay);
+            return;
+          } else {
+            setError('AI model is currently overloaded. Please try again in a few minutes or use cached results if available.');
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Handle other errors
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${data.error?.message || 'Unknown error'}`);
+        }
+        
+        console.log('AI Response data:', data);
         if (data.itineraries && Array.isArray(data.itineraries)) {
+          console.log('AI Itineraries:', data.itineraries);
+          console.log('First itinerary structure:', data.itineraries[0]);
           setAiItineraries(data.itineraries);
+          // Store the first itinerary slug if available
+          if (data.itineraries.length > 0 && data.itineraries[0].slug) {
+            setItinerarySlug(data.itineraries[0].slug);
+          }
+          setError(''); // Clear any previous errors
+          setRetryCount(0); // Reset retry count on success
+          setRetryDelay(2000); // Reset delay
         } else {
           setItinerary('No itinerary generated.');
         }
-      })
-      .catch(() => setError('Failed to generate itinerary. Please try again.'))
-      .finally(() => setLoading(false));
-  }, [from, to, travellers, travelClass, startDate, endDate, navigate]);
+      } catch (err) {
+        console.error('Generation error:', err);
+        setError(`Failed to generate itinerary: ${err.message}. Please try again.`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    generateItinerary();
+  }, [from, to, travellers, travelClass, startDate, endDate, navigate, hasCachedResults, retryCount, retryDelay]);
+
+  // Navigate to individual itinerary page
+  const handleViewDetails = (itinerary, index) => {
+    if (itinerary.slug) {
+      const stateData = {
+        from,
+        to,
+        travellers,
+        travelClass,
+        startDate,
+        endDate,
+        itineraryId: itinerary.id,
+        itineraryData: itinerary,
+        imageUrl: itinerary.headerImage || imageUrls[index] || '/default-travel.jpg' // Use saved header image or Pixabay image
+      };
+      console.log('Navigating to itinerary with state:', stateData);
+      console.log('Itinerary ID:', itinerary.id);
+      console.log('Image URL:', itinerary.headerImage || imageUrls[index]);
+      // Navigate to the individual itinerary page
+      navigate(`/itinerary/${itinerary.slug}`, {
+        state: stateData
+      });
+    }
+  };
+
+  const handleNewSearch = () => {
+    // Clear saved data
+    localStorage.removeItem('drexcape_search_results');
+    localStorage.removeItem('drexcape_search_params');
+    // Reset cache flags
+    setHasCachedResults(false);
+    setResultsFromCache(false);
+    setAiItineraries([]);
+    setImageUrls({});
+    // Navigate to homepage for new search
+    navigate('/');
+  };
+
+  const handleUseCachedResults = () => {
+    const savedItineraries = localStorage.getItem('drexcape_search_results');
+    if (savedItineraries) {
+      try {
+        const parsed = JSON.parse(savedItineraries);
+        if (parsed.itineraries && parsed.itineraries.length > 0) {
+          setAiItineraries(parsed.itineraries);
+          setImageUrls(parsed.imageUrls || {});
+          setResultsFromCache(true);
+          setHasCachedResults(true);
+          setError(''); // Clear error
+          setLoading(false);
+          console.log('Using cached results due to model overload');
+        }
+      } catch (error) {
+        console.error('Error loading cached results:', error);
+      }
+    }
+  };
+
+  const handleRetry = () => {
+    setRetryCount(0);
+    setRetryDelay(2000);
+    setError('');
+    setLoading(true);
+    // Trigger regeneration by updating a dependency
+    setHasCachedResults(false);
+  };
 
   return (
     <div className="app">
@@ -184,7 +383,21 @@ const SearchResults = () => {
       </header>
       <main style={{ paddingTop: 120 }}>
         <div style={{ maxWidth: 800, margin: '40px auto', padding: 24, background: '#fff', borderRadius: 16, color: '#222', boxShadow: '0 8px 32px 0 rgba(31,38,135,0.18)' }}>
-          <h2>Search Results</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <h2>Search Results</h2>
+            <Button
+              onClick={handleNewSearch}
+              sx={{
+                background: 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)',
+                color: '#fff',
+                '&:hover': {
+                  background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
+                }
+              }}
+            >
+              🔍 New Search
+            </Button>
+          </div>
           <div style={{ marginBottom: 24 }}>
             <strong>From:</strong> {from} <br />
             <strong>To:</strong> {to} <br />
@@ -192,10 +405,163 @@ const SearchResults = () => {
             <strong>Class:</strong> {travelClass} <br />
             <strong>Departure:</strong> {startDate} <br />
             <strong>Return:</strong> {endDate}
+            {resultsFromCache && (
+              <div style={{ 
+                marginTop: 8, 
+                padding: '8px 12px', 
+                background: 'linear-gradient(90deg, #e8f5e8 0%, #f0f8f0 100%)', 
+                borderRadius: 6, 
+                border: '1px solid #4caf50',
+                color: '#2e7d32',
+                fontSize: '14px'
+              }}>
+                📋 Showing previously generated results
+              </div>
+            )}
           </div>
           <h3>AI-Generated Itinerary</h3>
-          {loading && <div>Generating itinerary...</div>}
-          {error && <div style={{ color: 'red' }}>{error}</div>}
+          {loading && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '60px 20px',
+              textAlign: 'center',
+              background: 'rgba(255, 255, 255, 0.95)',
+              borderRadius: 16,
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              margin: '20px 0'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                border: '4px solid #f3f3f3',
+                borderTop: '4px solid #a084e8',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                marginBottom: '20px'
+              }}></div>
+              
+              <Typography 
+                variant="h5" 
+                sx={{
+                  fontFamily: 'Rajdhani, Orbitron, sans-serif',
+                  fontWeight: 700,
+                  color: '#2a0140',
+                  mb: 2
+                }}
+              >
+                ✈️ Crafting Your Perfect Journey
+              </Typography>
+              
+              <Typography 
+                variant="body1" 
+                sx={{
+                  color: '#666',
+                  mb: 3,
+                  maxWidth: '500px'
+                }}
+              >
+                Our AI is analyzing {from} to {to} and creating {travellers} personalized {travelClass} travel packages just for you...
+              </Typography>
+              
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                marginBottom: '20px'
+              }}>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#a084e8',
+                  animation: 'pulse 1.4s ease-in-out infinite both'
+                }}></div>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#6d3bbd',
+                  animation: 'pulse 1.4s ease-in-out infinite both 0.2s'
+                }}></div>
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#a084e8',
+                  animation: 'pulse 1.4s ease-in-out infinite both 0.4s'
+                }}></div>
+              </div>
+              
+              <Typography 
+                variant="body2" 
+                sx={{
+                  color: '#888',
+                  fontStyle: 'italic'
+                }}
+              >
+                This usually takes 10-15 seconds...
+              </Typography>
+              
+              <style jsx>{`
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+                @keyframes pulse {
+                  0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
+                  40% { transform: scale(1); opacity: 1; }
+                }
+              `}</style>
+            </div>
+          )}
+          
+          {error && (
+            <div style={{
+              padding: '20px',
+              background: 'rgba(255, 235, 235, 0.95)',
+              borderRadius: 8,
+              border: '1px solid #ffcdd2',
+              color: '#d32f2f',
+              textAlign: 'center',
+              margin: '20px 0'
+            }}>
+              <Typography variant="h6" sx={{ mb: 1 }}>❌ Generation Failed</Typography>
+              <Typography variant="body2" sx={{ mb: 2 }}>{error}</Typography>
+              
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Button
+                  onClick={handleRetry}
+                  sx={{
+                    background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
+                    color: '#fff',
+                    '&:hover': {
+                      background: 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)',
+                    }
+                  }}
+                >
+                  🔄 Retry
+                </Button>
+                
+                {error.includes('overloaded') && (
+                  <Button
+                    onClick={handleUseCachedResults}
+                    sx={{
+                      background: 'linear-gradient(90deg, #4caf50 0%, #45a049 100%)',
+                      color: '#fff',
+                      '&:hover': {
+                        background: 'linear-gradient(90deg, #45a049 0%, #4caf50 100%)',
+                      }
+                    }}
+                  >
+                    📋 Use Cached Results
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
           {/* Render itinerary cards if available */}
           {aiItineraries.length > 0 ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 32, justifyContent: 'center' }}>
@@ -228,79 +594,80 @@ const SearchResults = () => {
                       borderTopRightRadius: 18,
                       borderBottom: '1.5px solid #ece6fa',
                     }}
-                    onError={e => { e.target.onerror = null; e.target.src = '/default-travel.jpg'; }}
                   />
-                  {/* Card Header */}
-                  <div style={{
-                    background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
-                    color: '#fff',
-                    padding: '18px 20px 10px 20px',
-                    fontWeight: 800,
-                    fontSize: '1.18rem',
-                    letterSpacing: '0.5px',
-                    borderBottom: '1.5px solid #ece6fa',
-                    fontFamily: 'Orbitron, Rajdhani, sans-serif',
-                  }}>{item.packageName}</div>
-                  {/* Card Body */}
-                  <div style={{ padding: '18px 20px 10px 20px', flex: 1 }}>
-                    <div style={{ fontSize: '1.05rem', marginBottom: 6, color: '#6d3bbd', fontWeight: 700 }}>
-                      <span style={{ marginRight: 12 }}>Duration: <span style={{ color: '#222', fontWeight: 600 }}>{item.days} Days</span></span>
-                      <span>Destinations: <span style={{ color: '#222', fontWeight: 600 }}>{item.destinations?.join(', ') || 'N/A'}</span></span>
-                    </div>
-                    {/* Places to Visit */}
-                    {item.placesToVisit && item.placesToVisit.length > 0 && (
-                      <div style={{ margin: '8px 0 8px 0' }}>
-                        <div style={{ fontSize: '1.01rem', color: '#a084e8', fontWeight: 700, marginBottom: 2 }}>Places to Visit:</div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                          {item.placesToVisit.map((place, i) => (
-                            <span key={i} style={{
-                              background: 'linear-gradient(90deg, #f5e6ff 0%, #ece6fa 100%)',
-                              color: '#6d3bbd',
-                              borderRadius: 8,
-                              padding: '3px 10px',
-                              fontSize: '0.97rem',
-                              fontWeight: 600,
-                              marginBottom: 2,
-                            }}>{place}</span>
-                          ))}
-                        </div>
+                  {/* Card Content */}
+                  <div style={{ padding: 24, flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ marginBottom: 16 }}>
+                      <h3 style={{ 
+                        fontSize: '1.25rem', 
+                        fontWeight: 700, 
+                        color: '#2a0140', 
+                        margin: '0 0 8px 0',
+                        fontFamily: 'Rajdhani, Orbitron, sans-serif'
+                      }}>
+                        {item.packageName}
+                      </h3>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 12, 
+                        marginBottom: 12,
+                        fontSize: '0.9rem',
+                        color: '#666'
+                      }}>
+                        <span>📅 {item.days} Days</span>
+                        <span>📍 {item.destinations?.length || 0} Destinations</span>
                       </div>
-                    )}
-                    <div style={{ fontSize: '1.01rem', marginBottom: 8, color: '#a084e8', fontWeight: 700 }}>Tour Highlights:</div>
-                    <ul style={{ margin: 0, paddingLeft: 18, color: '#222', fontSize: '0.98rem', fontWeight: 500 }}>
-                      {item.highlights?.map((h, i) => <li key={i}>{h}</li>)}
-                    </ul>
-                  </div>
-                  {/* Card Footer */}
-                  <div style={{
-                    padding: '12px 20px 18px 20px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    borderTop: '1.5px solid #ece6fa',
-                    background: '#fafafd',
-                  }}>
-                    <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#a084e8' }}>₹{item.price?.toLocaleString()}</div>
-                    <button
-                      style={{
-                        background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
-                        color: '#fff',
-                        border: 'none',
-                        borderRadius: 8,
-                        padding: '8px 22px',
-                        cursor: 'pointer',
-                        fontWeight: 700,
-                        fontSize: '1.05rem',
-                        fontFamily: 'Rajdhani, Orbitron, sans-serif',
-                        boxShadow: '0 2px 8px #a084e822',
-                        transition: 'background 0.2s, transform 0.2s',
-                      }}
-                      onClick={() => handleViewDetails(idx)}
-                      onMouseOver={e => e.currentTarget.style.background = 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)'}
-                      onMouseOut={e => e.currentTarget.style.background = 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)'}
-                    >
-                      View Tour Details
-                    </button>
+                      <div style={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: 6, 
+                        marginBottom: 16 
+                      }}>
+                        {item.highlights?.slice(0, 3).map((highlight, idx) => (
+                          <span key={idx} style={{
+                            background: '#f0e6ff',
+                            color: '#6d3bbd',
+                            padding: '4px 8px',
+                            borderRadius: 12,
+                            fontSize: '0.8rem',
+                            fontWeight: 600
+                          }}>
+                            {highlight}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div style={{ 
+                      marginTop: 'auto', 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      background: '#fafafd',
+                    }}>
+                      <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#a084e8' }}>₹{item.price?.toLocaleString()}</div>
+                      <button
+                        style={{
+                          background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 8,
+                          padding: '8px 16px',
+                          cursor: 'pointer',
+                          fontWeight: 700,
+                          fontSize: '0.95rem',
+                          fontFamily: 'Rajdhani, Orbitron, sans-serif',
+                          boxShadow: '0 2px 8px #a084e822',
+                          transition: 'background 0.2s, transform 0.2s',
+                        }}
+                        onClick={() => handleViewDetails(item, idx)}
+                        onMouseOver={e => e.currentTarget.style.background = 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)'}
+                        onMouseOut={e => e.currentTarget.style.background = 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)'}
+                      >
+                        Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

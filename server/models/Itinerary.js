@@ -1,25 +1,38 @@
 const mongoose = require('mongoose');
 
 const itinerarySchema = new mongoose.Schema({
-  // Unique identifier and slug
-  slug: {
+  // Basic itinerary information
+  title: {
     type: String,
-    unique: true,
+    required: true,
     index: true
   },
-  itineraryId: {
-    type: String,
-    unique: true
-  },
-
-  // Search parameters
-  from: {
-    type: String,
+  days: {
+    type: Number,
     required: true
   },
-  to: {
-    type: String,
+  destinations: [{
+    type: String
+  }],
+  placesToVisit: [{
+    type: String
+  }],
+  highlights: [{
+    type: String
+  }],
+  price: {
+    type: Number,
     required: true
+  },
+  fromLocation: {
+    type: String,
+    required: true,
+    index: true
+  },
+  toLocation: {
+    type: String,
+    required: true,
+    index: true
   },
   departureDate: {
     type: Date,
@@ -29,7 +42,7 @@ const itinerarySchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  travellers: {
+  travelers: {
     type: Number,
     required: true
   },
@@ -37,25 +50,18 @@ const itinerarySchema = new mongoose.Schema({
     type: String,
     required: true
   },
-
-  // Generated itineraries
-  itineraries: [{
-    packageName: String,
-    days: Number,
-    destinations: [String],
-    placesToVisit: [String],
-    highlights: [String],
-    price: Number,
-    details: String
-  }],
-
-  // User who generated this (if logged in)
-  generatedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    default: null
+  
+  // Unique identifiers
+  slug: {
+    type: String,
+    unique: true,
+    index: true
   },
-
+  itineraryId: {
+    type: String,
+    unique: true
+  },
+  
   // Analytics
   views: {
     type: Number,
@@ -65,56 +71,61 @@ const itinerarySchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  lastViewed: {
+  
+  // SEO metadata
+  metaTitle: String,
+  metaDescription: String,
+  
+  // Header image from Pixabay
+  headerImage: {
+    type: String,
+    default: '/default-travel.jpg'
+  },
+  
+  // Timestamps
+  createdAt: {
     type: Date,
     default: Date.now
   },
-
-  // SEO and sharing
-  metaTitle: String,
-  metaDescription: String,
-  featuredImage: String,
-
-  // Status
-  isPublished: {
-    type: Boolean,
-    default: true
-  },
-  isFeatured: {
-    type: Boolean,
-    default: false
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
-}, {
-  timestamps: true
 });
 
-// Generate unique slug
+// Static method to generate unique slug
+itinerarySchema.statics.generateUniqueSlug = async function(baseSlug) {
+  let slug = baseSlug;
+  let counter = 1;
+  
+  while (await this.findOne({ slug })) {
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+  
+  return slug;
+};
+
+// Pre-save hook to generate unique identifiers
 itinerarySchema.pre('save', async function(next) {
   if (!this.slug) {
-    const baseSlug = `${this.from}-to-${this.to}-${this.travellers}-travelers-${this.travelClass}`.toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
+    const baseSlug = `${this.fromLocation.toLowerCase().replace(/\s+/g, '-')}-to-${this.toLocation.toLowerCase().replace(/\s+/g, '-')}-${this.travelers}-travelers-${this.travelClass.toLowerCase()}-${this.days}`;
     
-    let slug = baseSlug;
-    let counter = 1;
-    
-    while (await mongoose.model('Itinerary').findOne({ slug })) {
-      slug = `${baseSlug}-${counter}`;
-      counter++;
-    }
-    
-    this.slug = slug;
+    // Generate unique slug
+    this.slug = await this.constructor.generateUniqueSlug(baseSlug);
   }
   
   if (!this.itineraryId) {
     this.itineraryId = `IT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
   
+  this.updatedAt = new Date();
   next();
 });
 
-// Index for efficient queries (only add non-unique indexes here)
-itinerarySchema.index({ from: 1, to: 1 });
+// Indexes for efficient queries
+itinerarySchema.index({ fromLocation: 1, toLocation: 1 });
+itinerarySchema.index({ departureDate: 1, returnDate: 1 });
 itinerarySchema.index({ createdAt: -1 });
 itinerarySchema.index({ views: -1 });
 
