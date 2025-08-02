@@ -32,6 +32,9 @@ import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
 import ItineraryDetailPage from './components/ItineraryDetailPage';
 import PromotionalPopup from './components/PromotionalPopup';
+import BlogList from './components/BlogList';
+import BlogDetail from './components/BlogDetail';
+import AdminBlogManager from './components/AdminBlogManager';
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -782,6 +785,7 @@ function App() {
             <a href="#destinations" className="nav-link">Destinations</a>
             <a href="#categories" className="nav-link">Categories</a>
             <a href="#offers" className="nav-link">Offers</a>
+            <a href="/blog" className="nav-link">Blog</a>
             <a href="#contact" className="nav-link">Contact</a>
           </nav>
         </div>
@@ -876,6 +880,15 @@ function App() {
         } />
         <Route path="/search-results" element={<SearchResults />} />
         <Route path="/itinerary/:slug" element={<ItineraryDetailPage />} />
+        <Route path="/blog" element={<BlogList />} />
+        <Route path="/blog/:slug" element={<BlogDetail />} />
+        <Route path="/admin/blogs" element={
+          isAdminLoggedIn ? (
+            <AdminBlogManager />
+          ) : (
+            <AdminLogin onLoginSuccess={handleAdminLogin} />
+          )
+        } />
       </Routes>
     </BrowserRouter>
   )

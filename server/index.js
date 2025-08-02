@@ -21,6 +21,7 @@ const adminDashboardRoutes = require('./routes/adminDashboard');
 const userRoutes = require('./routes/users');
 const itineraryRoutes = require('./routes/itineraries');
 const promotionalLeadsRoutes = require('./routes/promotionalLeads');
+const blogRoutes = require('./routes/blogs');
 
 // Import middleware
 const { trackAIUsage } = require('./middleware/aiUsageTracker');
@@ -466,6 +467,9 @@ app.use('/api/itineraries', itineraryRoutes);
 
 // Promotional leads routes
 app.use('/api/promotional-leads', promotionalLeadsRoutes);
+
+// Blog routes
+app.use('/api/blogs', blogRoutes);
 
 const PORT = 3001;
 app.listen(PORT, () => {

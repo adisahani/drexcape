@@ -26,12 +26,14 @@ import {
   Logout as LogoutIcon,
   AccountCircle as AccountCircleIcon,
   Notifications as NotificationsIcon,
-  Person as PersonIcon
+  Person as PersonIcon,
+  Article as ArticleIcon
 } from '@mui/icons-material';
 import AIUsageSection from './AIUsageSection';
 import DashboardOverview from './DashboardOverview';
 import AdminSettings from './AdminSettings';
 import PromotionalLeadsSection from './PromotionalLeadsSection';
+import AdminBlogManager from './AdminBlogManager';
 
 const drawerWidth = 240;
 
@@ -70,7 +72,8 @@ const AdminDashboard = ({ onLogout }) => {
     { text: 'AI Usage', icon: <AnalyticsIcon />, value: 'ai-usage' },
     { text: 'Dashboard', icon: <DashboardIcon />, value: 'dashboard' },
     { text: 'Promotional Leads', icon: <PersonIcon />, value: 'promotional-leads' },
-    { text: 'Settings', icon: <SettingsIcon />, value: 'settings' }
+    { text: 'Settings', icon: <SettingsIcon />, value: 'settings' },
+    { text: 'Blog Management', icon: <ArticleIcon />, value: 'blog-management' }
   ];
 
   const drawer = (
@@ -110,6 +113,8 @@ const AdminDashboard = ({ onLogout }) => {
         return <PromotionalLeadsSection />;
       case 'settings':
         return <AdminSettings />;
+      case 'blog-management':
+        return <AdminBlogManager />;
       default:
         return <AIUsageSection />;
     }
