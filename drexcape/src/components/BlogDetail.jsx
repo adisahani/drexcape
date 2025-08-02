@@ -22,8 +22,10 @@ import {
   WhatsApp as WhatsAppIcon,
   Visibility as VisibilityIcon,
   AccessTime as AccessTimeIcon,
-  CalendarToday as CalendarIcon
+  CalendarToday as CalendarIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
+import Header from './Header';
 
 const BlogDetail = () => {
   const { slug } = useParams();
@@ -57,6 +59,69 @@ const BlogDetail = () => {
 
   const handleShare = async (platform) => {
     try {
+      const url = `${window.location.origin}/blog/${blog.slug}`;
+      const text = blog.title;
+      
+      if (platform === 'copy') {
+        // Copy link to clipboard
+        try {
+          await navigator.clipboard.writeText(url);
+          // Show a temporary notification
+          const notification = document.createElement('div');
+          notification.textContent = 'Link copied to clipboard!';
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #a084e8;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(160, 132, 232, 0.3);
+            animation: slideIn 0.3s ease;
+          `;
+          document.body.appendChild(notification);
+          setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => document.body.removeChild(notification), 300);
+          }, 2000);
+        } catch (err) {
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = url;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          
+          const notification = document.createElement('div');
+          notification.textContent = 'Link copied to clipboard!';
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #a084e8;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(160, 132, 232, 0.3);
+            animation: slideIn 0.3s ease;
+          `;
+          document.body.appendChild(notification);
+          setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => document.body.removeChild(notification), 300);
+          }, 2000);
+        }
+        return;
+      }
+
       await fetch(`/api/blogs/${blog._id}/share`, {
         method: 'POST',
         headers: {
@@ -65,10 +130,6 @@ const BlogDetail = () => {
         body: JSON.stringify({ platform })
       });
 
-      // Open share dialog
-      const url = `${window.location.origin}/blog/${blog.slug}`;
-      const text = blog.title;
-      
       const shareUrls = {
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
         twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
@@ -108,32 +169,38 @@ const BlogDetail = () => {
   if (error) {
     return (
       <Box sx={{ 
-        maxWidth: 800, 
-        margin: '0 auto', 
-        padding: 3,
-        background: 'rgba(58, 0, 106, 0.05)',
-        backdropFilter: 'blur(10px)',
         minHeight: '100vh',
-        pt: 10
+        background: 'rgba(58, 0, 106, 0.05)',
+        backdropFilter: 'blur(10px)'
       }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/blog')}
-          sx={{ 
-            color: '#a084e8',
-            borderColor: '#a084e8',
-            '&:hover': {
-              borderColor: '#6d3bbd',
-              backgroundColor: 'rgba(160, 132, 232, 0.1)'
-            }
-          }}
-        >
-          Back to Blogs
-        </Button>
+        {/* Header */}
+        <Header />
+        
+        <Box sx={{ 
+          maxWidth: 800, 
+          margin: '0 auto', 
+          padding: 3,
+          pt: 12
+        }}>
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+          <Button
+            variant="outlined"
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate('/blog')}
+            sx={{ 
+              color: '#a084e8',
+              borderColor: '#a084e8',
+              '&:hover': {
+                borderColor: '#6d3bbd',
+                backgroundColor: 'rgba(160, 132, 232, 0.1)'
+              }
+            }}
+          >
+            Back to Blogs
+          </Button>
+        </Box>
       </Box>
     );
   }
@@ -146,10 +213,12 @@ const BlogDetail = () => {
     <Box sx={{ 
       minHeight: '100vh',
       background: 'rgba(58, 0, 106, 0.05)',
-      backdropFilter: 'blur(10px)',
-      pt: 10 // Add top padding for header
+      backdropFilter: 'blur(10px)'
     }}>
-      <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 3 }}>
+      {/* Header */}
+      <Header />
+      
+      <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 3, pt: 12 }}>
         {/* Back Button */}
         <Button
           variant="outlined"
@@ -362,48 +431,59 @@ const BlogDetail = () => {
           <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: '#333333' }}>
             Share this post
           </Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
-            <IconButton
-              onClick={() => handleShare('facebook')}
-              sx={{ 
-                bgcolor: '#1877f2',
-                color: 'white',
-                '&:hover': { bgcolor: '#166fe5' }
-              }}
-            >
-              <FacebookIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => handleShare('twitter')}
-              sx={{ 
-                bgcolor: '#1da1f2',
-                color: 'white',
-                '&:hover': { bgcolor: '#1a91da' }
-              }}
-            >
-              <TwitterIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => handleShare('linkedin')}
-              sx={{ 
-                bgcolor: '#0077b5',
-                color: 'white',
-                '&:hover': { bgcolor: '#006097' }
-              }}
-            >
-              <LinkedInIcon />
-            </IconButton>
-            <IconButton
-              onClick={() => handleShare('whatsapp')}
-              sx={{ 
-                bgcolor: '#25d366',
-                color: 'white',
-                '&:hover': { bgcolor: '#128c7e' }
-              }}
-            >
-              <WhatsAppIcon />
-            </IconButton>
-          </Box>
+                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
+             <IconButton
+               onClick={() => handleShare('copy')}
+               sx={{ 
+                 bgcolor: '#a084e8',
+                 color: 'white',
+                 '&:hover': { bgcolor: '#6d3bbd' }
+               }}
+               title="Copy Link"
+             >
+               <CopyIcon />
+             </IconButton>
+             <IconButton
+               onClick={() => handleShare('facebook')}
+               sx={{ 
+                 bgcolor: '#1877f2',
+                 color: 'white',
+                 '&:hover': { bgcolor: '#166fe5' }
+               }}
+             >
+               <FacebookIcon />
+             </IconButton>
+             <IconButton
+               onClick={() => handleShare('twitter')}
+               sx={{ 
+                 bgcolor: '#1da1f2',
+                 color: 'white',
+                 '&:hover': { bgcolor: '#1a91da' }
+               }}
+             >
+               <TwitterIcon />
+             </IconButton>
+             <IconButton
+               onClick={() => handleShare('linkedin')}
+               sx={{ 
+                 bgcolor: '#0077b5',
+                 color: 'white',
+                 '&:hover': { bgcolor: '#006097' }
+               }}
+             >
+               <LinkedInIcon />
+             </IconButton>
+             <IconButton
+               onClick={() => handleShare('whatsapp')}
+               sx={{ 
+                 bgcolor: '#25d366',
+                 color: 'white',
+                 '&:hover': { bgcolor: '#128c7e' }
+               }}
+             >
+               <WhatsAppIcon />
+             </IconButton>
+           </Box>
         </Box>
 
         {/* Share Stats */}

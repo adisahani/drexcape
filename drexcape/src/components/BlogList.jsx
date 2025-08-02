@@ -25,8 +25,10 @@ import {
   Favorite as FavoriteIcon,
   Share as ShareIcon,
   AccessTime as AccessTimeIcon,
-  ArrowBack as ArrowBackIcon
+  ArrowBack as ArrowBackIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
+import Header from './Header';
 
 const BlogList = () => {
   const navigate = useNavigate();
@@ -93,6 +95,69 @@ const BlogList = () => {
 
   const handleShare = async (blogId, platform) => {
     try {
+      const url = `${window.location.origin}/blog/${blogs.find(b => b._id === blogId)?.slug}`;
+      const text = blogs.find(b => b._id === blogId)?.title;
+      
+      if (platform === 'copy') {
+        // Copy link to clipboard
+        try {
+          await navigator.clipboard.writeText(url);
+          // Show a temporary notification
+          const notification = document.createElement('div');
+          notification.textContent = 'Link copied to clipboard!';
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #a084e8;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(160, 132, 232, 0.3);
+            animation: slideIn 0.3s ease;
+          `;
+          document.body.appendChild(notification);
+          setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => document.body.removeChild(notification), 300);
+          }, 2000);
+        } catch (err) {
+          // Fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = url;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          
+          const notification = document.createElement('div');
+          notification.textContent = 'Link copied to clipboard!';
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #a084e8;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(160, 132, 232, 0.3);
+            animation: slideIn 0.3s ease;
+          `;
+          document.body.appendChild(notification);
+          setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => document.body.removeChild(notification), 300);
+          }, 2000);
+        }
+        return;
+      }
+
       await fetch(`/api/blogs/${blogId}/share`, {
         method: 'POST',
         headers: {
@@ -101,10 +166,6 @@ const BlogList = () => {
         body: JSON.stringify({ platform })
       });
 
-      // Open share dialog
-      const url = `${window.location.origin}/blog/${blogs.find(b => b._id === blogId)?.slug}`;
-      const text = blogs.find(b => b._id === blogId)?.title;
-      
       const shareUrls = {
         facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`,
         twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`,
@@ -145,10 +206,12 @@ const BlogList = () => {
     <Box sx={{ 
       minHeight: '100vh',
       background: 'rgba(58, 0, 106, 0.05)',
-      backdropFilter: 'blur(10px)',
-      pt: 10 // Add top padding for header
+      backdropFilter: 'blur(10px)'
     }}>
-      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3 }}>
+      {/* Header */}
+      <Header />
+      
+      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3, pt: 12 }}>
         {/* Back to Home Button */}
         <Button
           variant="outlined"
@@ -400,22 +463,42 @@ const BlogList = () => {
                       </Typography>
                     </Box>
                     
-                    <IconButton 
-                      size="small" 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleShare(blog._id, 'facebook');
-                      }}
-                      sx={{ 
-                        p: 0.5,
-                        color: '#a084e8',
-                        '&:hover': {
-                          backgroundColor: 'rgba(160, 132, 232, 0.2)'
-                        }
-                      }}
-                    >
-                      <ShareIcon sx={{ fontSize: '0.8rem' }} />
-                    </IconButton>
+                                         <Box sx={{ display: 'flex', gap: 0.5 }}>
+                       <IconButton 
+                         size="small" 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           handleShare(blog._id, 'copy');
+                         }}
+                         sx={{ 
+                           p: 0.5,
+                           color: '#a084e8',
+                           '&:hover': {
+                             backgroundColor: 'rgba(160, 132, 232, 0.2)'
+                           }
+                         }}
+                         title="Copy Link"
+                       >
+                         <CopyIcon sx={{ fontSize: '0.8rem' }} />
+                       </IconButton>
+                       <IconButton 
+                         size="small" 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           handleShare(blog._id, 'facebook');
+                         }}
+                         sx={{ 
+                           p: 0.5,
+                           color: '#a084e8',
+                           '&:hover': {
+                             backgroundColor: 'rgba(160, 132, 232, 0.2)'
+                           }
+                         }}
+                         title="Share"
+                       >
+                         <ShareIcon sx={{ fontSize: '0.8rem' }} />
+                       </IconButton>
+                     </Box>
                   </Box>
                 </CardContent>
               </Card>
