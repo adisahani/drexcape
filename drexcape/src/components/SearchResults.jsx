@@ -122,6 +122,7 @@ const SearchResults = () => {
   const [itinerarySlug, setItinerarySlug] = useState(null); // New state for itinerary slug
   const [retryCount, setRetryCount] = useState(0);
   const [retryDelay, setRetryDelay] = useState(2000); // Start with 2 seconds
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // No localStorage saving - always use fresh parameters
 
@@ -300,6 +301,68 @@ const SearchResults = () => {
     setRetryDelay(2000);
     setError('');
     setLoading(true);
+  };
+
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    setError('');
+    
+    try {
+      // Convert dates to proper format for the API
+      const formatDateForAPI = (date) => {
+        if (date instanceof Date) {
+          return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+        }
+        if (typeof date === 'string') {
+          // If it's already a formatted string, try to parse it
+          const parsed = new Date(date);
+          if (!isNaN(parsed.getTime())) {
+            return parsed.toISOString().split('T')[0];
+          }
+        }
+        return date; // Fallback
+      };
+
+      const response = await fetch('/api/generate-itinerary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from,
+          to,
+          departureDate: formatDateForAPI(startDate),
+          returnDate: formatDateForAPI(endDate),
+          travellers,
+          travelClass,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      // Check for 503 model overload error
+      if (data.error && data.error.code === 503) {
+        setError('AI model is temporarily overloaded. Please try again in a few minutes.');
+        setIsLoadingMore(false);
+        return;
+      }
+      
+      // Handle other errors
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${data.error?.message || 'Unknown error'}`);
+      }
+      
+      if (data.itineraries && Array.isArray(data.itineraries)) {
+        // Add new itineraries to existing ones
+        setAiItineraries(prev => [...prev, ...data.itineraries]);
+        setError(''); // Clear any previous errors
+      } else {
+        setError('No additional itineraries generated.');
+      }
+    } catch (err) {
+      console.error('Load more error:', err);
+      setError(`Failed to load more itineraries: ${err.message}. Please try again.`);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
   return (
@@ -611,6 +674,60 @@ const SearchResults = () => {
             </div>
           ) : (
             itinerary && <pre style={{ whiteSpace: 'pre-wrap', background: '#f5f5f5', padding: 16, borderRadius: 8, color: '#222' }}>{itinerary}</pre>
+          )}
+          
+          {/* Load More Button */}
+          {aiItineraries.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'center', 
+              marginTop: 32,
+              marginBottom: 24
+            }}>
+              <Button
+                onClick={handleLoadMore}
+                disabled={isLoadingMore}
+                sx={{
+                  background: 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)',
+                  color: '#fff',
+                  padding: '12px 32px',
+                  fontSize: '1.1rem',
+                  fontWeight: 700,
+                  borderRadius: 12,
+                  textTransform: 'none',
+                  fontFamily: 'Rajdhani, Orbitron, sans-serif',
+                  boxShadow: '0 4px 16px #a084e844',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 6px 20px #a084e866',
+                  },
+                  '&:disabled': {
+                    background: '#ccc',
+                    transform: 'none',
+                    boxShadow: 'none',
+                  }
+                }}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid #fff',
+                      borderTop: '2px solid transparent',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite',
+                      marginRight: '8px'
+                    }}></div>
+                    Loading More...
+                  </>
+                ) : (
+                  '🔄 Load More Variations'
+                )}
+              </Button>
+            </div>
           )}
           {/* Modal for details */}
           {selectedItinerary !== null && (
