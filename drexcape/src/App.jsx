@@ -26,7 +26,7 @@ import { Navigation, Pagination, A11y, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import SearchResults from './components/SearchResults';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
@@ -291,50 +291,88 @@ function PopularDestinationsSlider() {
 }
 
 function PopularSearchesSlider() {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const searches = [
-    'Adventure', 'Beaches', 'Culture', 'Mountains', 'Nightlife', 
-    'Food & Dining', 'Wellness', 'Shopping', 'History', 'Nature',
-    'Luxury', 'Budget', 'Family', 'Romance', 'Solo Travel'
-  ];
-
-  const [cardsPerView, setCardsPerView] = useState(4);
+  const [popularItineraries, setPopularItineraries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const updateCardsPerView = () => {
-      if (window.innerWidth < 768) {
-        setCardsPerView(2); // Mobile
-      } else if (window.innerWidth < 1024) {
-        setCardsPerView(4); // Tablet
-      } else {
-        setCardsPerView(5); // Desktop
+    const fetchPopularSearches = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/itineraries/popular/searches');
+        const data = await response.json();
+        
+        console.log('Popular searches response:', data);
+        
+        if (response.ok) {
+          setPopularItineraries(data.popularItineraries || []);
+        }
+      } catch (err) {
+        console.error('Error fetching popular searches:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    updateCardsPerView();
-    window.addEventListener('resize', updateCardsPerView);
-    return () => window.removeEventListener('resize', updateCardsPerView);
+    fetchPopularSearches();
   }, []);
 
-  const totalSlides = Math.ceil(searches.length / cardsPerView);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % totalSlides);
-    }, 4000); // Auto change every 4 seconds
-
-    return () => clearInterval(interval);
-  }, [totalSlides]);
-
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  const handleItineraryClick = (itinerary) => {
+    navigate('/search-results', {
+      state: {
+        from: itinerary.fromLocation,
+        to: itinerary.toLocation,
+        departureDate: itinerary.departureDate,
+        returnDate: itinerary.returnDate,
+        travellers: 1,
+        travelClass: 'Economy'
+      }
+    });
   };
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
-  };
+  // Fallback data when no itineraries in database
+  const fallbackSearches = [
+    { id: 1, title: "Mumbai to Goa", location: "Mumbai → Goa", rating: "4.8", image: cardImage1 },
+    { id: 2, title: "Delhi to Manali", location: "Delhi → Manali", rating: "4.9", image: cardImage2 },
+    { id: 3, title: "Bangalore to Jaipur", location: "Bangalore → Jaipur", rating: "4.7", image: cardImage1 },
+    { id: 4, title: "Chennai to Kerala", location: "Chennai → Kerala", rating: "4.6", image: cardImage2 },
+    { id: 5, title: "Hyderabad to Udaipur", location: "Hyderabad → Udaipur", rating: "4.5", image: cardImage1 },
+    { id: 6, title: "Pune to Shimla", location: "Pune → Shimla", rating: "4.9", image: cardImage2 },
+    { id: 7, title: "Kolkata to Darjeeling", location: "Kolkata → Darjeeling", rating: "4.7", image: cardImage1 },
+    { id: 8, title: "Ahmedabad to Rishikesh", location: "Ahmedabad → Rishikesh", rating: "4.8", image: cardImage2 }
+  ];
 
-  return (
+  // Use real data if available, otherwise use fallback
+  const displayData = popularItineraries.length > 0 ? popularItineraries : fallbackSearches;
+
+  console.log('Display data:', displayData);
+  console.log('Rendering Popular Searches with', displayData.length, 'items');
+
+      return (
+      <div style={{ 
+        visibility: 'visible', 
+        opacity: 1, 
+        display: 'block', 
+        minHeight: '400px', 
+        padding: '20px 0', 
+        overflow: 'visible'
+      }}>
+        <style>
+          {`
+            .swiper-slide {
+              height: auto !important;
+              overflow: visible !important;
+            }
+            .swiper-wrapper {
+              height: auto !important;
+              overflow: visible !important;
+            }
+            .swiper-container {
+              height: auto !important;
+              overflow: visible !important;
+            }
+          `}
+        </style>
     <Swiper
       modules={[Navigation, Pagination, A11y, Autoplay]}
       loop={true}
@@ -343,22 +381,82 @@ function PopularSearchesSlider() {
       slidesPerGroup={2}
       navigation
       pagination={{ clickable: true }}
-      autoplay={{ delay: 4200, disableOnInteraction: false }}
+      autoplay={{ delay: 3000, disableOnInteraction: false }}
       breakpoints={{
         900: { slidesPerView: 5, slidesPerGroup: 2, spaceBetween: 40 },
         700: { slidesPerView: 2, slidesPerGroup: 1, spaceBetween: 16 },
         0: { slidesPerView: 1, slidesPerGroup: 1, spaceBetween: 8 },
       }}
+      style={{ 
+        visibility: 'visible', 
+        opacity: 1, 
+        display: 'block', 
+        minHeight: '350px',
+        overflow: 'visible',
+        padding: '20px 0'
+      }}
     >
-      {searches.map((search, index) => (
-        <SwiperSlide key={index}>
-          <div className="category-card glass gsap-fade-in">
-            <span className="category-icon">🌟</span>
-            <span className="category-name">{search}</span>
+      {displayData.map((item, index) => {
+        console.log('Rendering item:', item);
+        return (
+          <SwiperSlide key={item._id || item.id || index} style={{ height: 'auto', overflow: 'visible' }}>
+                      <div 
+            className="destination-card glass gsap-fade-in"
+            onClick={() => {
+              if (item.fromLocation) {
+                // Real itinerary from database
+                handleItineraryClick(item);
+              } else {
+                // Fallback data
+                const [from, to] = item.location.split(' → ');
+                navigate('/search-results', {
+                  state: {
+                    from: from,
+                    to: to,
+                    travellers: 1,
+                    travelClass: 'Economy'
+                  }
+                });
+              }
+            }}
+            style={{ 
+              cursor: 'pointer',
+              border: '2px solid rgba(255,255,255,0.2)',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              minHeight: '320px',
+              padding: '15px',
+              visibility: 'visible',
+              opacity: 1,
+              display: 'block',
+              position: 'relative',
+              zIndex: 10
+            }}
+          >
+                          <div 
+              className="destination-img" 
+              style={{
+                backgroundImage: `url(${item.headerImage || item.image || '/default-travel.jpg'})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundRepeat: 'no-repeat',
+                minHeight: '150px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                marginBottom: '15px'
+              }}
+            />
+            <div className="destination-info" style={{ padding: '10px 0' }}>
+              <h3 style={{ marginBottom: '8px', fontSize: '1rem' }}>{item.title}</h3>
+              <p style={{ marginBottom: '10px', fontSize: '0.9rem' }}>{item.fromLocation ? `${item.fromLocation} → ${item.toLocation}` : item.location}</p>
+              <span className="rating" style={{ fontSize: '0.85rem' }}>
+                ⭐ {item.days ? `${item.days} days • ₹${item.price?.toLocaleString() || 'Contact for price'}` : item.rating}
+              </span>
+            </div>
           </div>
         </SwiperSlide>
-      ))}
+        );
+      })}
     </Swiper>
+    </div>
   );
 }
 
@@ -655,8 +753,8 @@ function App() {
         <PopularDestinationsSlider />
       </section>
 
-      {/* Categories / Popular Searches */}
-      <section className="categories-section" id="categories" ref={categoriesRef}>
+      {/* Popular Searches */}
+      <section className="categories-section" id="categories" ref={categoriesRef} style={{ visibility: 'visible', opacity: 1, display: 'block' }}>
         <h2 className="section-title gsap-fade-in">Popular Searches</h2>
         <PopularSearchesSlider />
       </section>

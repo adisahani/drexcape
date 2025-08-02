@@ -36,10 +36,18 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 // Generate and save basic itineraries
 app.post('/api/generate-itinerary', trackAIUsage('generate-itinerary'), async (req, res) => {
   const { from, to, departureDate, returnDate, travellers, travelClass } = req.body;
+  
+  console.log('Received dates:', { departureDate, returnDate });
 
-  // Calculate days from dates
+  // Calculate days from dates with validation
   const startDate = new Date(departureDate);
   const endDate = new Date(returnDate);
+  
+  // Validate dates
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+    return res.status(400).json({ error: 'Invalid date format provided' });
+  }
+  
   const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
   // userPrompt construction remains unchanged
@@ -138,6 +146,22 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
           console.log('Failed to fetch image, using default. Error:', imageError.message);
         }
 
+        // Validate and format dates
+        const formatDate = (dateString) => {
+          console.log('Formatting date:', dateString);
+          if (!dateString) {
+            console.log('No date string, using current date');
+            return new Date();
+          }
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) {
+            console.log('Invalid date, using current date');
+            return new Date();
+          }
+          console.log('Valid date:', date);
+          return date;
+        };
+
         const itinerary = new Itinerary({
           title: pkg.packageName,
           days: pkg.days,
@@ -147,8 +171,8 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
           price: pkg.price,
           fromLocation: from,
           toLocation: to,
-          departureDate: startDate,
-          returnDate: endDate,
+          departureDate: formatDate(startDate),
+          returnDate: formatDate(endDate),
           travelers: travellers,
           travelClass: travelClass,
           headerImage: headerImage

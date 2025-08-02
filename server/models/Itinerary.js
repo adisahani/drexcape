@@ -128,5 +128,6 @@ itinerarySchema.index({ fromLocation: 1, toLocation: 1 });
 itinerarySchema.index({ departureDate: 1, returnDate: 1 });
 itinerarySchema.index({ createdAt: -1 });
 itinerarySchema.index({ views: -1 });
+// Note: itineraryId index is automatically created by unique: true
 
 module.exports = mongoose.model('Itinerary', itinerarySchema); 

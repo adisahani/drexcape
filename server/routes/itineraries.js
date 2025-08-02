@@ -94,6 +94,22 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// Get popular searches (recent itineraries)
+router.get('/popular/searches', async (req, res) => {
+  try {
+    // Get recent itineraries, limit to 10 most recent
+    const popularItineraries = await Itinerary.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('title destinations fromLocation toLocation price days highlights headerImage slug');
+    
+    res.json({ popularItineraries });
+  } catch (error) {
+    console.error('Get popular searches error:', error);
+    res.status(500).json({ error: 'Failed to get popular searches' });
+  }
+});
+
 // Increment view count
 router.post('/:id/view', async (req, res) => {
   try {
