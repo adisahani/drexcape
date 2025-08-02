@@ -97,11 +97,19 @@ router.delete('/:id', async (req, res) => {
 // Get popular searches (recent itineraries)
 router.get('/popular/searches', async (req, res) => {
   try {
-    // Get recent itineraries, limit to 10 most recent
-    const popularItineraries = await Itinerary.find()
+    // Get recent itineraries with valid slugs and full details, limit to 10 most recent
+    const popularItineraries = await Itinerary.find({
+      slug: { $exists: true, $ne: null, $ne: '' }, // Only itineraries with valid slugs
+      title: { $exists: true, $ne: null, $ne: '' }, // Must have title
+      fromLocation: { $exists: true, $ne: null, $ne: '' }, // Must have from location
+      toLocation: { $exists: true, $ne: null, $ne: '' }, // Must have to location
+      headerImage: { $exists: true, $ne: null, $ne: '' } // Must have header image
+    })
       .sort({ createdAt: -1 })
       .limit(10)
-      .select('title destinations fromLocation toLocation price days highlights headerImage slug');
+      .select('title destinations fromLocation toLocation price days highlights headerImage slug createdAt');
+    
+    console.log(`Found ${popularItineraries.length} valid itineraries for popular searches`);
     
     res.json({ popularItineraries });
   } catch (error) {

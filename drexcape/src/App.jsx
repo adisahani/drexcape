@@ -302,13 +302,26 @@ function PopularSearchesSlider() {
         const response = await fetch('/api/itineraries/popular/searches');
         const data = await response.json();
         
-        console.log('Popular searches response:', data);
+        console.log('🎯 Popular searches API response:', data);
+        console.log('📊 Number of itineraries returned:', data.popularItineraries?.length || 0);
         
         if (response.ok) {
+          // Log details of each itinerary
+          if (data.popularItineraries) {
+            data.popularItineraries.forEach((itinerary, index) => {
+              console.log(`📋 Itinerary ${index + 1}:`, {
+                title: itinerary.title,
+                slug: itinerary.slug,
+                fromLocation: itinerary.fromLocation,
+                toLocation: itinerary.toLocation,
+                hasHeaderImage: !!itinerary.headerImage
+              });
+            });
+          }
           setPopularItineraries(data.popularItineraries || []);
         }
       } catch (err) {
-        console.error('Error fetching popular searches:', err);
+        console.error('❌ Error fetching popular searches:', err);
       } finally {
         setLoading(false);
       }
@@ -318,16 +331,27 @@ function PopularSearchesSlider() {
   }, []);
 
   const handleItineraryClick = (itinerary) => {
-    navigate('/search-results', {
-      state: {
-        from: itinerary.fromLocation,
-        to: itinerary.toLocation,
-        departureDate: itinerary.departureDate,
-        returnDate: itinerary.returnDate,
-        travellers: 1,
-        travelClass: 'Economy'
-      }
-    });
+    console.log('🎯 Popular search clicked:', itinerary);
+    
+    // Check if itinerary has valid slug
+    if (itinerary.slug) {
+      console.log('📎 Navigating to slug URL:', `/itinerary/${itinerary.slug}`);
+      // Navigate directly to the itinerary detail page using slug
+      navigate(`/itinerary/${itinerary.slug}`);
+    } else {
+      console.log('⚠️ No valid slug, falling back to search results');
+      // Fallback to search results if no slug
+      navigate('/search-results', {
+        state: {
+          from: itinerary.fromLocation,
+          to: itinerary.toLocation,
+          departureDate: itinerary.departureDate,
+          returnDate: itinerary.returnDate,
+          travellers: 1,
+          travelClass: 'Economy'
+        }
+      });
+    }
   };
 
   // Fallback data when no itineraries in database
@@ -345,8 +369,28 @@ function PopularSearchesSlider() {
   // Use real data if available, otherwise use fallback
   const displayData = popularItineraries.length > 0 ? popularItineraries : fallbackSearches;
 
-  console.log('Display data:', displayData);
-  console.log('Rendering Popular Searches with', displayData.length, 'items');
+  console.log('🎯 Display data:', displayData);
+  console.log('📊 Rendering Popular Searches with', displayData.length, 'items');
+  console.log('🔍 Using real data:', popularItineraries.length > 0 ? 'Yes' : 'No (fallback)');
+
+  // Show loading or no data message
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <div style={{ color: '#ffe066', fontSize: '1.2rem' }}>Loading popular searches...</div>
+      </div>
+    );
+  }
+
+  // Show message if no valid itineraries found
+  if (!loading && popularItineraries.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+        <div style={{ color: '#ffe066', fontSize: '1.2rem', marginBottom: '10px' }}>No completed itineraries found</div>
+        <div style={{ color: '#ffffff', fontSize: '1rem', opacity: 0.8 }}>Complete some searches to see them here!</div>
+      </div>
+    );
+  }
 
       return (
       <div style={{ 
@@ -403,8 +447,13 @@ function PopularSearchesSlider() {
                       <div 
             className="destination-card glass gsap-fade-in"
             onClick={() => {
-              if (item.fromLocation) {
-                // Real itinerary from database
+              console.log('🎯 Card clicked:', item);
+              if (item.slug) {
+                // Real itinerary with valid slug - navigate directly to detail page
+                console.log('📎 Navigating to slug URL:', `/itinerary/${item.slug}`);
+                navigate(`/itinerary/${item.slug}`);
+              } else if (item.fromLocation) {
+                // Real itinerary without slug - use search results
                 handleItineraryClick(item);
               } else {
                 // Fallback data

@@ -32,6 +32,7 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
   });
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     console.log('🎭 === PromotionalPopup useEffect called ===');
@@ -75,16 +76,107 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+    
+    // Phone number validation
+    if (name === 'phone') {
+      // Remove all non-digit characters
+      const cleaned = value.replace(/\D/g, '');
+      
+      // Limit to 15 digits
+      if (cleaned.length <= 15) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: cleaned
+        }));
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  // Phone number validation function
+  const validatePhoneNumber = (phone) => {
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Check if it's a valid phone number (at least 10 digits, max 15)
+    if (cleaned.length < 10) {
+      return 'Phone number must be at least 10 digits';
+    }
+    if (cleaned.length > 15) {
+      return 'Phone number cannot exceed 15 digits';
+    }
+    
+    // Check for common patterns (optional)
+    const phoneRegex = /^[+]?[\d\s\-\(\)]{10,15}$/;
+    if (!phoneRegex.test(phone)) {
+      return 'Please enter a valid phone number';
+    }
+    
+    return null; // No error
+  };
+
+  // Name validation function
+  const validateName = (name) => {
+    if (!name.trim()) {
+      return 'Name is required';
+    }
+    if (name.trim().length < 2) {
+      return 'Name must be at least 2 characters';
+    }
+    if (name.trim().length > 50) {
+      return 'Name cannot exceed 50 characters';
+    }
+    
+    // Check for valid name pattern (letters, spaces, hyphens, apostrophes)
+    const nameRegex = /^[a-zA-Z\s\-']+$/;
+    if (!nameRegex.test(name.trim())) {
+      return 'Name can only contain letters, spaces, hyphens, and apostrophes';
+    }
+    
+    return null; // No error
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     console.log('📝 === handleSubmit called ===');
     console.log('  - formData:', formData);
+    
+    // Clear previous errors
+    setErrors({});
+    
+    // Validate phone number
+    const phoneError = validatePhoneNumber(formData.phone);
+    if (phoneError) {
+      console.log('❌ Phone validation error:', phoneError);
+      setErrors(prev => ({
+        ...prev,
+        phone: phoneError
+      }));
+      return;
+    }
+
+    // Validate name
+    const nameError = validateName(formData.name);
+    if (nameError) {
+      console.log('❌ Name validation error:', nameError);
+      setErrors(prev => ({
+        ...prev,
+        name: nameError
+      }));
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -262,6 +354,9 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
                  name="name"
                  value={formData.name}
                  onChange={handleInputChange}
+                 error={!!errors.name}
+                 helperText={errors.name}
+                 placeholder="Enter your full name"
                  sx={{
                    mb: 2,
                    '& .MuiOutlinedInput-root': {
@@ -270,61 +365,80 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
                      fontWeight: '500',
                      fontSize: '1.1rem',
                      '& fieldset': {
-                       borderColor: 'rgba(255, 224, 102, 0.5)',
+                       borderColor: errors.name ? '#ff4444' : 'rgba(255, 224, 102, 0.5)',
                      },
                      '&:hover fieldset': {
-                       borderColor: '#ffe066',
+                       borderColor: errors.name ? '#ff4444' : '#ffe066',
                      },
                      '&.Mui-focused fieldset': {
-                       borderColor: '#ffe066',
+                       borderColor: errors.name ? '#ff4444' : '#ffe066',
+                     },
+                     '&.Mui-error fieldset': {
+                       borderColor: '#ff4444',
                      },
                    },
                    '& .MuiInputLabel-root': {
-                     color: 'rgba(255, 255, 255, 0.7)',
+                     color: errors.name ? '#ff4444' : 'rgba(255, 255, 255, 0.7)',
                      fontFamily: 'Rajdhani, sans-serif',
                      fontWeight: '500',
                      '&.Mui-focused': {
-                       color: '#ffe066',
+                       color: errors.name ? '#ff4444' : '#ffe066',
                      },
+                   },
+                   '& .MuiFormHelperText-root': {
+                     color: '#ff4444',
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontSize: '0.9rem',
                    },
                  }}
                  required
                />
               
                              <TextField
-                 fullWidth
-                 label="Phone Number"
-                 name="phone"
-                 value={formData.phone}
-                 onChange={handleInputChange}
-                 sx={{
-                   mb: 3,
-                   '& .MuiOutlinedInput-root': {
-                     color: '#ffffff',
-                     fontFamily: 'Rajdhani, sans-serif',
-                     fontWeight: '500',
-                     fontSize: '1.1rem',
-                     '& fieldset': {
-                       borderColor: 'rgba(255, 224, 102, 0.5)',
-                     },
-                     '&:hover fieldset': {
-                       borderColor: '#ffe066',
-                     },
-                     '&.Mui-focused fieldset': {
-                       borderColor: '#ffe066',
-                     },
-                   },
-                   '& .MuiInputLabel-root': {
-                     color: 'rgba(255, 255, 255, 0.7)',
-                     fontFamily: 'Rajdhani, sans-serif',
-                     fontWeight: '500',
-                     '&.Mui-focused': {
-                       color: '#ffe066',
-                     },
-                   },
-                 }}
-                 required
-               />
+                  fullWidth
+                  label="Phone Number"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  error={!!errors.phone}
+                  helperText={errors.phone}
+                  placeholder="Enter your phone number"
+                  sx={{
+                    mb: 3,
+                    '& .MuiOutlinedInput-root': {
+                      color: '#ffffff',
+                      fontFamily: 'Rajdhani, sans-serif',
+                      fontWeight: '500',
+                      fontSize: '1.1rem',
+                      '& fieldset': {
+                        borderColor: errors.phone ? '#ff4444' : 'rgba(255, 224, 102, 0.5)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: errors.phone ? '#ff4444' : '#ffe066',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: errors.phone ? '#ff4444' : '#ffe066',
+                      },
+                      '&.Mui-error fieldset': {
+                        borderColor: '#ff4444',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: errors.phone ? '#ff4444' : 'rgba(255, 255, 255, 0.7)',
+                      fontFamily: 'Rajdhani, sans-serif',
+                      fontWeight: '500',
+                      '&.Mui-focused': {
+                        color: errors.phone ? '#ff4444' : '#ffe066',
+                      },
+                    },
+                    '& .MuiFormHelperText-root': {
+                      color: '#ff4444',
+                      fontFamily: 'Rajdhani, sans-serif',
+                      fontSize: '0.9rem',
+                    },
+                  }}
+                  required
+                />
 
                              <Typography variant="body2" sx={{ 
                  color: 'rgba(255, 255, 255, 0.7)', 
