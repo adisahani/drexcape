@@ -4,6 +4,9 @@ import '../App.css';
 import drexcapeLogo from '../assets/drexcape-logo.png';
 import ReactMarkdown from 'react-markdown';
 import { Typography, Button } from '@mui/material'; // Added Typography and Button imports
+import { Lock as LockIcon } from '@mui/icons-material';
+import PromotionalPopup from './PromotionalPopup';
+import { hasUserFilledContactForm, resetPopupDismissal } from '../utils/cookies';
 
 function GooeyCursor() {
   const containerRef = useRef(null);
@@ -123,6 +126,8 @@ const SearchResults = () => {
   const [retryCount, setRetryCount] = useState(0);
   const [retryDelay, setRetryDelay] = useState(2000); // Start with 2 seconds
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [pendingItinerary, setPendingItinerary] = useState(null);
+  const [showContactForm, setShowContactForm] = useState(false);
 
   // No localStorage saving - always use fresh parameters
 
@@ -267,6 +272,27 @@ const SearchResults = () => {
 
   // Navigate to individual itinerary page
   const handleViewDetails = (itinerary, index) => {
+    console.log('🔍 === handleViewDetails called ===');
+    console.log('📋 hasUserFilledContactForm():', hasUserFilledContactForm());
+    console.log('🍪 Current cookies:', document.cookie);
+    console.log('📦 showContactForm state:', showContactForm);
+    console.log('📦 pendingItinerary state:', pendingItinerary);
+    
+    // Check if user has filled contact form
+    if (!hasUserFilledContactForm()) {
+      console.log('🔒 User has NOT filled contact form - showing popup');
+      // Reset dismissal status and show popup
+      resetPopupDismissal();
+      console.log('🗑️ After resetPopupDismissal - cookies:', document.cookie);
+      setPendingItinerary({ itinerary, index });
+      console.log('📦 Set pendingItinerary:', { itinerary, index });
+      setShowContactForm(true);
+      console.log('📝 Set showContactForm to true');
+      return;
+    }
+
+    console.log('✅ User has filled contact form - navigating to details');
+    // If contact form is filled, navigate to itinerary detail page
     if (itinerary.slug) {
       const stateData = {
         from,
@@ -362,6 +388,44 @@ const SearchResults = () => {
       setError(`Failed to load more itineraries: ${err.message}. Please try again.`);
     } finally {
       setIsLoadingMore(false);
+    }
+  };
+
+  // Handle contact form submission and proceed with itinerary
+  const handleContactFormSubmitted = () => {
+    console.log('🎉 === handleContactFormSubmitted called ===');
+    console.log('📋 pendingItinerary:', pendingItinerary);
+    console.log('📦 showContactForm state:', showContactForm);
+    
+    if (pendingItinerary) {
+      const { itinerary, index } = pendingItinerary;
+      console.log('✅ Processing pending itinerary:', { itinerary, index });
+      setPendingItinerary(null);
+      setShowContactForm(false);
+      console.log('📦 Set pendingItinerary to null');
+      console.log('📝 Set showContactForm to false');
+      
+      // Navigate to itinerary detail page
+      if (itinerary.slug) {
+        const stateData = {
+          from,
+          to,
+          travellers,
+          travelClass,
+          startDate,
+          endDate,
+          itineraryId: itinerary.id,
+          itineraryData: itinerary,
+          imageUrl: itinerary.headerImage || imageUrls[index] || '/default-travel.jpg'
+        };
+        
+        console.log('🚀 Navigating to itinerary with state:', stateData);
+        navigate(`/itinerary/${itinerary.slug}`, {
+          state: stateData
+        });
+      }
+    } else {
+      console.log('❌ No pending itinerary found');
     }
   };
 
@@ -665,7 +729,14 @@ const SearchResults = () => {
                         onMouseOver={e => e.currentTarget.style.background = 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)'}
                         onMouseOut={e => e.currentTarget.style.background = 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)'}
                       >
-                        Details
+                        {hasUserFilledContactForm() ? (
+                          'Details'
+                        ) : (
+                          <>
+                            <LockIcon style={{ fontSize: '16px', marginRight: '4px' }} />
+                            Details
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -850,6 +921,20 @@ const SearchResults = () => {
           )}
         </div>
       </main>
+
+      {/* Contact Form Popup */}
+      {showContactForm && (
+        <>
+          {console.log('🎭 === Rendering PromotionalPopup ===')}
+          {console.log('📦 showContactForm:', showContactForm)}
+          {console.log('📦 pendingItinerary:', pendingItinerary)}
+          <PromotionalPopup 
+            key={`popup-${Date.now()}`} // Force remount each time
+            onFormSubmitted={handleContactFormSubmitted}
+            forceOpen={true}
+          />
+        </>
+      )}
     </div>
   );
 };

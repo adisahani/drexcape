@@ -18,8 +18,13 @@ import {
   Discount as DiscountIcon,
   Flight as FlightIcon
 } from '@mui/icons-material';
+import { setCookie, getCookie, hasUserFilledContactForm, markUserAsContacted, deleteCookie } from '../utils/cookies';
 
-const PromotionalPopup = () => {
+const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
+  console.log('🎭 === PromotionalPopup component MOUNTING ===');
+  console.log('  - forceOpen prop:', forceOpen);
+  console.log('  - onFormSubmitted prop:', onFormSubmitted);
+  
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -29,21 +34,43 @@ const PromotionalPopup = () => {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    // Check if user has already submitted or dismissed
-    const hasInteracted = localStorage.getItem('drexcape_popup_interacted');
-    if (!hasInteracted) {
-      // Show popup after 5 seconds
-      const timer = setTimeout(() => {
-        setOpen(true);
-      }, 5000);
-
-      return () => clearTimeout(timer);
+    console.log('🎭 === PromotionalPopup useEffect called ===');
+    console.log('  - forceOpen:', forceOpen);
+    console.log('  - Current cookies:', document.cookie);
+    console.log('  - open state:', open);
+    
+    // NEW LOGIC: Always show when forced, regardless of cookies
+    if (forceOpen) {
+      console.log('🚀 Force opening popup');
+      setOpen(true);
+      return;
     }
-  }, []);
+    
+    // Existing auto-show logic for new visitors
+    const hasInteracted = getCookie('drexcape_popup_interacted');
+    console.log('  - hasInteracted:', hasInteracted);
+    if (!hasInteracted) {
+      console.log('⏰ Setting auto-show timer for 5 seconds');
+      const timer = setTimeout(() => setOpen(true), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      console.log('❌ Not showing auto popup - user has interacted');
+    }
+  }, [forceOpen]); // Back to just forceOpen dependency
+
+  // NEW FUNCTION: Clear dismissal flag
+  const resetDismissal = () => {
+    console.log('🗑️ resetDismissal called - deleting popup interaction cookie');
+    deleteCookie('drexcape_popup_interacted');
+  };
 
   const handleClose = () => {
+    console.log('❌ === handleClose called ===');
+    console.log('  - Setting open to false');
     setOpen(false);
-    localStorage.setItem('drexcape_popup_interacted', 'dismissed');
+    // Set cookie to 'dismissed' but don't prevent future forced opens
+    setCookie('drexcape_popup_interacted', 'dismissed', 365);
+    console.log('🍪 Set dismissed cookie - current cookies:', document.cookie);
   };
 
   const handleInputChange = (e) => {
@@ -56,11 +83,13 @@ const PromotionalPopup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('📝 === handleSubmit called ===');
+    console.log('  - formData:', formData);
     setLoading(true);
 
     try {
       // Submit to backend API
-      const response = await fetch('http://localhost:3001/api/promotional-leads/submit', {
+      const response = await fetch('/api/promotional-leads/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,22 +103,36 @@ const PromotionalPopup = () => {
         throw new Error(data.error || 'Failed to submit form');
       }
 
-      // Save to localStorage as backup
-      localStorage.setItem('drexcape_user_data', JSON.stringify(formData));
-      localStorage.setItem('drexcape_popup_interacted', 'submitted');
+      console.log('✅ Form submitted successfully');
+      // Save to cookies
+      setCookie('drexcape_user_data', JSON.stringify(formData), 365);
+      markUserAsContacted();
       
       setSubmitted(true);
       setTimeout(() => {
+        console.log('🎉 Closing popup and calling callback');
         setOpen(false);
+        // Call the callback if provided
+        if (onFormSubmitted) {
+          console.log('📞 Calling onFormSubmitted callback');
+          onFormSubmitted();
+        }
       }, 2000);
     } catch (error) {
-      console.error('Error submitting form:', error);
-      // Fallback to localStorage only
-      localStorage.setItem('drexcape_user_data', JSON.stringify(formData));
-      localStorage.setItem('drexcape_popup_interacted', 'submitted');
+      console.error('❌ Error submitting form:', error);
+      // Fallback to cookies only
+      console.log('🔄 Fallback to cookies only');
+      setCookie('drexcape_user_data', JSON.stringify(formData), 365);
+      markUserAsContacted();
       setSubmitted(true);
       setTimeout(() => {
+        console.log('🎉 Closing popup and calling callback (fallback)');
         setOpen(false);
+        // Call the callback if provided
+        if (onFormSubmitted) {
+          console.log('📞 Calling onFormSubmitted callback (fallback)');
+          onFormSubmitted();
+        }
       }, 2000);
     } finally {
       setLoading(false);
@@ -97,6 +140,11 @@ const PromotionalPopup = () => {
   };
 
   const isFormValid = formData.name.trim() && formData.phone.trim();
+
+  console.log('🎭 === PromotionalPopup RENDERING ===');
+  console.log('  - open state:', open);
+  console.log('  - forceOpen prop:', forceOpen);
+  console.log('  - submitted state:', submitted);
 
   return (
     <Dialog
