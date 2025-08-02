@@ -79,12 +79,9 @@ function GooeyCursor() {
   }, [mouse.x, mouse.y]);
 
   // Don't render anything on touch devices
-  console.log('GooeyCursor - isTouchDevice:', isTouchDevice);
   if (isTouchDevice) {
-    console.log('GooeyCursor - Touch device detected, not rendering');
     return null;
   }
-  console.log('GooeyCursor - Mouse device detected, rendering cursor');
 
   return (
     <>

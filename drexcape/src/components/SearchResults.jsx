@@ -48,12 +48,12 @@ function GooeyCursor() {
   }, [mouse.x, mouse.y]);
 
   // Don't render anything on touch devices
-  console.log('SearchResults GooeyCursor - isTouchDevice:', isTouchDevice);
+
   if (isTouchDevice) {
-    console.log('SearchResults GooeyCursor - Touch device detected, not rendering');
+  
     return null;
   }
-  console.log('SearchResults GooeyCursor - Mouse device detected, rendering cursor');
+
 
   return (
     <>
@@ -85,17 +85,21 @@ const SearchResults = () => {
   
   // Get search parameters from state or localStorage
   const getSearchParams = () => {
-    const savedParams = localStorage.getItem('drexcape_search_params');
-    if (savedParams) {
-      return JSON.parse(savedParams);
-    }
+    // Handle both Date objects and formatted strings
+    const getDateValue = (date) => {
+      if (date instanceof Date) {
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      }
+      return date || '';
+    };
+    
     return {
       from: state.from || '',
       to: state.to || '',
       travellers: state.travellers || 1,
       travelClass: state.travelClass || 'Economy',
-      startDate: state.startDate || '',
-      endDate: state.endDate || ''
+      startDate: getDateValue(state.startDate || state.departureDate),
+      endDate: getDateValue(state.endDate || state.returnDate)
     };
   };
 
@@ -116,145 +120,49 @@ const SearchResults = () => {
   const [detailsData, setDetailsData] = useState(null);
   const [detailsError, setDetailsError] = useState('');
   const [itinerarySlug, setItinerarySlug] = useState(null); // New state for itinerary slug
-  const [resultsFromCache, setResultsFromCache] = useState(false);
-  const [hasCachedResults, setHasCachedResults] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [retryDelay, setRetryDelay] = useState(2000); // Start with 2 seconds
 
-  // Save search parameters to localStorage
-  useEffect(() => {
-    const searchParams = { from, to, travellers, travelClass, startDate, endDate };
-    localStorage.setItem('drexcape_search_params', JSON.stringify(searchParams));
-  }, [from, to, travellers, travelClass, startDate, endDate]);
+  // No localStorage saving - always use fresh parameters
 
-  // Load saved itineraries from localStorage on component mount
-  useEffect(() => {
-    console.log('SearchResults - Component mount, checking for cached results...');
-    const savedItineraries = localStorage.getItem('drexcape_search_results');
-    const savedParams = localStorage.getItem('drexcape_search_params');
-    
-    if (savedItineraries && savedParams) {
-      try {
-        const parsed = JSON.parse(savedItineraries);
-        const parsedParams = JSON.parse(savedParams);
-        
-        // Check if cached results match current search parameters
-        const currentParams = { from, to, travellers, travelClass, startDate, endDate };
-        const paramsMatch = JSON.stringify(currentParams) === JSON.stringify(parsedParams);
-        
-        console.log('SearchResults - Current params:', currentParams);
-        console.log('SearchResults - Cached params:', parsedParams);
-        console.log('SearchResults - Params match:', paramsMatch);
-        
-        if (parsed.itineraries && parsed.itineraries.length > 0 && paramsMatch) {
-          console.log('SearchResults - Found matching cached results:', parsed.itineraries.length, 'itineraries');
-          setAiItineraries(parsed.itineraries || []);
-          setImageUrls(parsed.imageUrls || {});
-          setResultsFromCache(true);
-          setHasCachedResults(true);
-          console.log('SearchResults - Cached results loaded successfully');
-        } else {
-          console.log('SearchResults - No matching cached results found');
-          setHasCachedResults(false);
-        }
-      } catch (error) {
-        console.error('SearchResults - Error loading saved itineraries:', error);
-        setHasCachedResults(false);
-      }
-    } else {
-      console.log('SearchResults - No cached results found');
-      setHasCachedResults(false);
-    }
-  }, [from, to, travellers, travelClass, startDate, endDate]);
-
-  // Handle saved state when coming back from itinerary details
-  useEffect(() => {
-    console.log('SearchResults - Location state changed:', location.state);
-    if (location.state?.fromSaved && location.state?.searchResults) {
-      try {
-        const { itineraries, imageUrls: savedImageUrls } = location.state.searchResults;
-        if (itineraries && itineraries.length > 0) {
-          console.log('SearchResults - Restoring from navigation state:', itineraries.length, 'itineraries');
-          setAiItineraries(itineraries || []);
-          setImageUrls(savedImageUrls || {});
-          setResultsFromCache(true);
-          setHasCachedResults(true);
-          console.log('SearchResults - Navigation state restored successfully');
-        } else {
-          console.log('SearchResults - No valid itineraries in navigation state');
-        }
-      } catch (error) {
-        console.error('SearchResults - Error restoring search results:', error);
-      }
-    }
-  }, [location.state]);
-
-  // Save itineraries to localStorage whenever they change
-  useEffect(() => {
-    if (aiItineraries.length > 0) {
-      const dataToSave = {
-        itineraries: aiItineraries,
-        imageUrls: imageUrls,
-        timestamp: Date.now()
-      };
-      localStorage.setItem('drexcape_search_results', JSON.stringify(dataToSave));
-    }
-  }, [aiItineraries, imageUrls]);
-
-  // Fetch image for a place (Pixabay proxy)
-  const fetchImage = async (place, destination, idx) => {
-    if (!place && !destination) return;
-    try {
-      const res = await fetch(`/api/place-image?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}`);
-      const data = await res.json();
-      setImageUrls(prev => ({ ...prev, [idx]: data.imageUrl || '/default-travel.jpg' }));
-    } catch {
-      setImageUrls(prev => ({ ...prev, [idx]: '/default-travel.jpg' }));
-    }
-  };
-
-  // When aiItineraries change, fetch images for each
-  useEffect(() => {
-    aiItineraries.forEach((item, idx) => {
-      const place = item.placesToVisit?.[0] || '';
-      const destination = item.destinations?.[0] || '';
-      if (!imageUrls[idx]) fetchImage(place, destination, idx);
-    });
-    // eslint-disable-next-line
-  }, [aiItineraries]);
-
-  // Fetch full details for a package
+  // Generate itineraries when parameters change
   useEffect(() => {
     if (!from || !to) {
       navigate('/');
       return;
     }
     
-    // Skip generation if we have cached results
-    if (hasCachedResults) {
-      console.log('Skipping generation - using cached results');
-      setLoading(false);
-      return;
-    }
-    
-    console.log('Generating new itineraries...');
     setLoading(true);
     setError('');
     setItinerary('');
     setAiItineraries([]);
     setItinerarySlug(null); // Reset slug on new search
-    setResultsFromCache(false); // Reset cache flag for new search
     
     const generateItinerary = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/generate-itinerary', {
+        // Convert dates to proper format for the API
+        const formatDateForAPI = (date) => {
+          if (date instanceof Date) {
+            return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+          }
+          if (typeof date === 'string') {
+            // If it's already a formatted string, try to parse it
+            const parsed = new Date(date);
+            if (!isNaN(parsed.getTime())) {
+              return parsed.toISOString().split('T')[0];
+            }
+          }
+          return date; // Fallback
+        };
+
+        const response = await fetch('/api/generate-itinerary', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             from,
             to,
-            departureDate: startDate,
-            returnDate: endDate,
+            departureDate: formatDateForAPI(startDate),
+            returnDate: formatDateForAPI(endDate),
             travellers,
             travelClass,
           }),
@@ -264,7 +172,6 @@ const SearchResults = () => {
         
         // Check for 503 model overload error
         if (data.error && data.error.code === 503) {
-          console.log('Model overloaded, retrying in', retryDelay, 'ms...');
           setError(`AI model is temporarily overloaded. Retrying in ${retryDelay/1000} seconds... (Attempt ${retryCount + 1}/3)`);
           
           if (retryCount < 2) { // Max 3 attempts
@@ -275,7 +182,7 @@ const SearchResults = () => {
             }, retryDelay);
             return;
           } else {
-            setError('AI model is currently overloaded. Please try again in a few minutes or use cached results if available.');
+            setError('AI model is currently overloaded. Please try again in a few minutes.');
             setLoading(false);
             return;
           }
@@ -286,10 +193,7 @@ const SearchResults = () => {
           throw new Error(`HTTP ${response.status}: ${data.error?.message || 'Unknown error'}`);
         }
         
-        console.log('AI Response data:', data);
         if (data.itineraries && Array.isArray(data.itineraries)) {
-          console.log('AI Itineraries:', data.itineraries);
-          console.log('First itinerary structure:', data.itineraries[0]);
           setAiItineraries(data.itineraries);
           // Store the first itinerary slug if available
           if (data.itineraries.length > 0 && data.itineraries[0].slug) {
@@ -310,7 +214,55 @@ const SearchResults = () => {
     };
     
     generateItinerary();
-  }, [from, to, travellers, travelClass, startDate, endDate, navigate, hasCachedResults, retryCount, retryDelay]);
+  }, [from, to, travellers, travelClass, startDate, endDate, navigate, retryCount, retryDelay]);
+
+  // Handle saved state when coming back from itinerary details
+  useEffect(() => {
+    if (location.state?.fromSaved && location.state?.searchResults) {
+      try {
+        const { itineraries, imageUrls: savedImageUrls } = location.state.searchResults;
+        if (itineraries && itineraries.length > 0) {
+          setAiItineraries(itineraries || []);
+          setImageUrls(savedImageUrls || {});
+          setResultsFromCache(true);
+          setHasCachedResults(true);
+        }
+      } catch (error) {
+        // Silent error handling
+      }
+    }
+  }, [location.state]);
+
+  // No localStorage saving - always generate fresh results
+
+  // Fetch image for a place (Pixabay proxy)
+  const fetchImage = async (place, destination, idx) => {
+    if (!place && !destination) return;
+    try {
+      const res = await fetch(`/api/place-image?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+      const data = await res.json();
+      // Use proxy for external images to avoid CORS issues
+      const imageUrl = data.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(data.imageUrl)}` : '/default-travel.jpg';
+      setImageUrls(prev => ({ ...prev, [idx]: imageUrl }));
+    } catch (error) {
+      setImageUrls(prev => ({ ...prev, [idx]: '/default-travel.jpg' }));
+    }
+  };
+
+  // When aiItineraries change, fetch images for each
+  useEffect(() => {
+    aiItineraries.forEach((item, idx) => {
+      const place = item.placesToVisit?.[0] || '';
+      const destination = item.destinations?.[0] || '';
+      if (!imageUrls[idx]) fetchImage(place, destination, idx);
+    });
+    // eslint-disable-next-line
+  }, [aiItineraries]);
+
+
 
   // Navigate to individual itinerary page
   const handleViewDetails = (itinerary, index) => {
@@ -337,36 +289,10 @@ const SearchResults = () => {
   };
 
   const handleNewSearch = () => {
-    // Clear saved data
-    localStorage.removeItem('drexcape_search_results');
-    localStorage.removeItem('drexcape_search_params');
-    // Reset cache flags
-    setHasCachedResults(false);
-    setResultsFromCache(false);
     setAiItineraries([]);
     setImageUrls({});
     // Navigate to homepage for new search
     navigate('/');
-  };
-
-  const handleUseCachedResults = () => {
-    const savedItineraries = localStorage.getItem('drexcape_search_results');
-    if (savedItineraries) {
-      try {
-        const parsed = JSON.parse(savedItineraries);
-        if (parsed.itineraries && parsed.itineraries.length > 0) {
-          setAiItineraries(parsed.itineraries);
-          setImageUrls(parsed.imageUrls || {});
-          setResultsFromCache(true);
-          setHasCachedResults(true);
-          setError(''); // Clear error
-          setLoading(false);
-          console.log('Using cached results due to model overload');
-        }
-      } catch (error) {
-        console.error('Error loading cached results:', error);
-      }
-    }
   };
 
   const handleRetry = () => {
@@ -374,8 +300,6 @@ const SearchResults = () => {
     setRetryDelay(2000);
     setError('');
     setLoading(true);
-    // Trigger regeneration by updating a dependency
-    setHasCachedResults(false);
   };
 
   return (
@@ -427,19 +351,7 @@ const SearchResults = () => {
             <strong>Class:</strong> {travelClass} <br />
             <strong>Departure:</strong> {startDate} <br />
             <strong>Return:</strong> {endDate}
-            {resultsFromCache && (
-              <div style={{ 
-                marginTop: 8, 
-                padding: '8px 12px', 
-                background: 'linear-gradient(90deg, #e8f5e8 0%, #f0f8f0 100%)', 
-                borderRadius: 6, 
-                border: '1px solid #4caf50',
-                color: '#2e7d32',
-                fontSize: '14px'
-              }}>
-                📋 Showing previously generated results
-              </div>
-            )}
+
           </div>
           <h3>AI-Generated Itinerary</h3>
           {loading && (
@@ -606,7 +518,7 @@ const SearchResults = () => {
                 }}>
                   {/* Card Image */}
                   <img
-                    src={imageUrls[idx] || '/default-travel.jpg'}
+                    src={item.headerImage || imageUrls[idx] || '/default-travel.jpg'}
                     alt={item.placesToVisit?.[0] || item.destinations?.[0] || 'Travel'}
                     style={{
                       width: '100%',
@@ -615,6 +527,9 @@ const SearchResults = () => {
                       borderTopLeftRadius: 18,
                       borderTopRightRadius: 18,
                       borderBottom: '1.5px solid #ece6fa',
+                    }}
+                    onError={(e) => {
+                      e.target.src = '/default-travel.jpg';
                     }}
                   />
                   {/* Card Content */}

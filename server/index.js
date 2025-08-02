@@ -119,14 +119,23 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
           const place = pkg.placesToVisit?.[0] || '';
           const destination = pkg.destinations?.[0] || '';
           if (place || destination) {
-            const imageResponse = await fetch(`https://pixabay.com/api/?key=${process.env.PIXABAY_API_KEY}&q=${encodeURIComponent(place || destination)}&image_type=photo&orientation=horizontal&safesearch=true&per_page=1`);
-            const imageData = await imageResponse.json();
+            const imageResponse = await axios.get('https://pixabay.com/api/', {
+              params: {
+                key: process.env.PIXABAY_API_KEY,
+                q: place || destination,
+                image_type: 'photo',
+                orientation: 'horizontal',
+                safesearch: 'true',
+                per_page: 3,
+              },
+            });
+            const imageData = imageResponse.data;
             if (imageData.hits && imageData.hits.length > 0) {
               headerImage = imageData.hits[0].webformatURL;
             }
           }
         } catch (imageError) {
-          console.log('Failed to fetch image, using default');
+          console.log('Failed to fetch image, using default. Error:', imageError.message);
         }
 
         const itinerary = new Itinerary({
@@ -404,6 +413,7 @@ app.get('/api/place-image', trackAIUsage('place-image'), async (req, res) => {
     return res.json({ imageUrl: null });
   } catch (err) {
     console.error('Pixabay error:', err?.response?.data || err);
+    console.error('Pixabay error details:', err.message);
     return res.status(500).json({ error: 'Failed to fetch image from Pixabay.' });
   }
 });
