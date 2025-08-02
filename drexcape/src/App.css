@@ -1555,3 +1555,36 @@ body {
     gap: 0.5rem;
   }
 }
+
+/* Light colored text for better visibility */
+.category-card, .category-name, .destination-info p, .section-title, .card-subtitle, .how-works-step-title, .how-works-step-desc {
+  color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.section-title {
+  background: linear-gradient(135deg, #ffffff 0%, #e0e0e0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.destination-info h3, .category-name {
+  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Make all text in cards and sections light colored */
+.destination-info p, .step-card p, .offer-info p {
+  color: #f0f0f0 !important;
+  opacity: 1 !important;
+}
+
+.step-card h4, .offer-info h4 {
+  background: linear-gradient(135deg, #ffe066 0%, #ffd700 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

@@ -47,29 +47,51 @@ function GooeyCursor() {
   const containerRef = React.useRef(null);
   const blobRefs = [React.useRef(null), React.useRef(null), React.useRef(null)];
   const [mouse, setMouse] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
   const positions = [React.useRef({ x: mouse.x, y: mouse.y }), React.useRef({ x: mouse.x, y: mouse.y }), React.useRef({ x: mouse.x, y: mouse.y })];
   const lags = [0.18, 0.12, 0.08];
 
   useEffect(() => {
-    const handleMove = (e) => setMouse({ x: e.clientX, y: e.clientY });
-    window.addEventListener('mousemove', handleMove);
-    let running = true;
-    function animate() {
-      positions.forEach((pos, i) => {
-        pos.current.x += (mouse.x - pos.current.x) * lags[i];
-        pos.current.y += (mouse.y - pos.current.y) * lags[i];
-        if (blobRefs[i].current) {
-          blobRefs[i].current.style.transform = `translate(${pos.current.x - 20}px, ${pos.current.y - 20}px)`;
-        }
-      });
-      if (running) requestAnimationFrame(animate);
-    }
-    animate();
-    return () => {
-      running = false;
-      window.removeEventListener('mousemove', handleMove);
+    // Detect touch device - only mobile/tablet, not desktop with touch
+    const checkTouchDevice = () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      return isMobile && hasTouch;
     };
+    
+    const isTouch = checkTouchDevice();
+    setIsTouchDevice(isTouch);
+    
+    // Only add mouse event listener if not a touch device
+    if (!isTouch) {
+      const handleMove = (e) => setMouse({ x: e.clientX, y: e.clientY });
+      window.addEventListener('mousemove', handleMove);
+      let running = true;
+      function animate() {
+        positions.forEach((pos, i) => {
+          pos.current.x += (mouse.x - pos.current.x) * lags[i];
+          pos.current.y += (mouse.y - pos.current.y) * lags[i];
+          if (blobRefs[i].current) {
+            blobRefs[i].current.style.transform = `translate(${pos.current.x - 20}px, ${pos.current.y - 20}px)`;
+          }
+        });
+        if (running) requestAnimationFrame(animate);
+      }
+      animate();
+      return () => {
+        running = false;
+        window.removeEventListener('mousemove', handleMove);
+      };
+    }
   }, [mouse.x, mouse.y]);
+
+  // Don't render anything on touch devices
+  console.log('ItineraryDetailPage GooeyCursor - isTouchDevice:', isTouchDevice);
+  if (isTouchDevice) {
+    console.log('ItineraryDetailPage GooeyCursor - Touch device detected, not rendering');
+    return null;
+  }
+  console.log('ItineraryDetailPage GooeyCursor - Mouse device detected, rendering cursor');
 
   return (
     <>
