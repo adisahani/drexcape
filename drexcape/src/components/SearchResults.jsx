@@ -844,18 +844,38 @@ const SearchResults = () => {
                     {detailsData.fullDayWisePlan && Array.isArray(detailsData.fullDayWisePlan) && (
                       <div style={{ marginBottom: 20 }}>
                         <div style={{ fontWeight: 700, color: '#a084e8', fontSize: '1.1rem', marginBottom: 12 }}>📋 Complete Day-wise Plan:</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' }}>
                           {detailsData.fullDayWisePlan.map((day, i) => (
                             <div key={i} style={{
                               background: '#fafafd',
                               borderRadius: 8,
                               padding: 12,
-                              border: '1px solid #ece6fa'
+                              border: '1px solid #ece6fa',
+                              width: '100%', // Make card full width
+                              maxWidth: '100%', // Ensure no max-width constraints
+                              display: 'flex',
+                              flexDirection: 'column'
                             }}>
                               <div style={{ fontWeight: 700, color: '#6d3bbd', marginBottom: 4 }}>
                                 {day.emoji} {day.title}
                               </div>
-                              <div style={{ color: '#222', fontSize: '0.95rem' }}>{day.description}</div>
+                              <div 
+                                style={{ 
+                                  color: '#222', 
+                                  fontSize: '0.95rem',
+                                  whiteSpace: 'pre-line',
+                                  lineHeight: '1.5',
+                                  flex: 1, // Take remaining space
+                                  display: 'flex',
+                                  flexDirection: 'column'
+                                }}
+                                dangerouslySetInnerHTML={{
+                                  __html: day.description
+                                    .replace(/\*\*(.*?)\*\*/g, '<span style="font-weight: 700; color: #6d3bbd; display: block; margin-top: 8px; margin-bottom: 4px;">$1</span>')
+                                    .replace(/\n\n/g, '<br><br>')
+                                    .replace(/\n/g, '<br>')
+                                }}
+                              />
                             </div>
                           ))}
                         </div>

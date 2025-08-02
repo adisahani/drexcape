@@ -715,13 +715,30 @@ const ItineraryDetailPage = () => {
                 </Typography>
                 <Grid container spacing={2}>
                   {details.fullDayWisePlan.map((day, idx) => (
-                    <Grid item xs={12} md={6} key={idx}>
+                    <Grid item xs={12} key={idx} sx={{ width: '100%' }}>
                       <Card sx={{ 
                         background: 'linear-gradient(135deg, #f8f4ff 0%, #f0e6ff 100%)',
                         border: '1px solid #e0d6ff',
-                        borderRadius: 2
+                        borderRadius: 2,
+                        width: '100%', // Make card full width
+                        maxWidth: '100%', // Ensure no max-width constraints
+                        '& .MuiCardContent-root': {
+                          flex: 1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          padding: '16px',
+                          width: '100%'
+                        }
                       }}>
-                        <CardContent>
+                        <CardContent sx={{ 
+                          flex: 1, // Make content take full available height
+                          display: 'flex',
+                          flexDirection: 'column',
+                          height: '100%',
+                          '&:last-child': {
+                            paddingBottom: '16px'
+                          }
+                        }}>
                           <Typography 
                             variant="h6" 
                             gutterBottom 
@@ -736,9 +753,30 @@ const ItineraryDetailPage = () => {
                             <span style={{ marginRight: 8, fontSize: '1.2em' }}>{day.emoji}</span>
                             {day.title}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {day.description}
-                          </Typography>
+                          <Box 
+                            component="div" 
+                            sx={{ 
+                              color: 'text.secondary',
+                              whiteSpace: 'pre-line',
+                              flex: 1, // Take remaining space
+                              '& strong': {
+                                fontWeight: 700,
+                                color: '#6d3bbd'
+                              },
+                              '& .time-section': {
+                                marginTop: '8px',
+                                marginBottom: '4px',
+                                fontWeight: 600,
+                                color: '#6d3bbd'
+                              }
+                            }}
+                            dangerouslySetInnerHTML={{
+                              __html: day.description
+                                .replace(/\*\*(.*?)\*\*/g, '<span class="time-section">$1</span>')
+                                .replace(/\n\n/g, '<br><br>')
+                                .replace(/\n/g, '<br>')
+                            }}
+                          />
                         </CardContent>
                       </Card>
                     </Grid>

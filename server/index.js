@@ -29,6 +29,9 @@ const { trackAIUsage } = require('./middleware/aiUsageTracker');
 const Itinerary = require('./models/Itinerary');
 const ItineraryDetails = require('./models/ItineraryDetails');
 
+// Import formatting function
+const { processItineraryDetails } = require('./routes/itineraries');
+
 // Remove all previous model configs and keys
 const GEMINI_25_FLASH_LITE_API_KEY = process.env.GEMINI_25_FLASH_LITE_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
@@ -223,7 +226,9 @@ app.get('/api/itinerary-details/:id', trackAIUsage('itinerary-details'), async (
     let details = await ItineraryDetails.findOne({ itineraryId: req.params.id });
     
     if (details) {
-      return res.json({ details });
+      // Format the day-wise plan before sending to frontend
+      const formattedDetails = processItineraryDetails(details.toObject());
+      return res.json({ details: formattedDetails });
     }
     
     // Generate new details if not exists
@@ -313,7 +318,9 @@ Return ONLY valid JSON. Do not include any explanation, comments, or markdown co
     
     await details.save();
     
-    res.json({ details });
+    // Format the day-wise plan before sending to frontend
+    const formattedDetails = processItineraryDetails(details.toObject());
+    res.json({ details: formattedDetails });
   } catch (error) {
     console.error(error?.response?.data || error);
     res.status(500).json({ error: error.toString() });

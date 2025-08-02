@@ -4,6 +4,45 @@ const ItineraryDetails = require('../models/ItineraryDetails');
 
 const router = express.Router();
 
+// Function to format day-wise plan description
+const formatDayWisePlan = (description) => {
+  if (!description) return description;
+  
+  // Split by common time indicators
+  const timeIndicators = ['Morning:', 'Afternoon:', 'Evening:', 'Night:', '🌅', '☀️', '🌆', '🌃', '🌙'];
+  
+  let formattedDescription = description;
+  
+  // Add line breaks and bold formatting for time indicators
+  timeIndicators.forEach(indicator => {
+    const regex = new RegExp(`(${indicator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    formattedDescription = formattedDescription.replace(regex, '\n\n**$1**');
+  });
+  
+  // Clean up multiple line breaks
+  formattedDescription = formattedDescription.replace(/\n{3,}/g, '\n\n');
+  
+  // Add bullet points for better readability
+  formattedDescription = formattedDescription.replace(/([^:]+):\s*/g, '• **$1:** ');
+  
+  return formattedDescription.trim();
+};
+
+// Function to process itinerary details and format day-wise plan
+const processItineraryDetails = (details) => {
+  if (!details) return details;
+  
+  // Format day-wise plan if it exists
+  if (details.fullDayWisePlan && Array.isArray(details.fullDayWisePlan)) {
+    details.fullDayWisePlan = details.fullDayWisePlan.map(day => ({
+      ...day,
+      description: formatDayWisePlan(day.description)
+    }));
+  }
+  
+  return details;
+};
+
 // Save new itinerary
 router.post('/', async (req, res) => {
   try {
@@ -140,4 +179,7 @@ router.post('/:id/share', async (req, res) => {
   }
 });
 
-module.exports = router; 
+module.exports = router;
+
+// Export the formatting function for use in other files
+module.exports.processItineraryDetails = processItineraryDetails; 
