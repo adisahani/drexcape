@@ -429,6 +429,11 @@ const SearchResults = () => {
     }
   };
 
+  const handleShowContactForm = () => {
+    console.log('🎭 === SearchResults handleShowContactForm called ===');
+    setShowContactForm(true);
+  };
+
   return (
     <div className="app">
       <GooeyCursor />
@@ -921,7 +926,7 @@ const SearchResults = () => {
                     {/* Booking CTA */}
                     {detailsData.bookingLink && (
                       <div style={{ textAlign: 'center', marginTop: 20 }}>
-                        <a href={detailsData.bookingLink} target="_blank" rel="noopener noreferrer" style={{
+                        <button onClick={handleShowContactForm} style={{
                           color: '#fff',
                           background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
                           padding: '12px 24px',
@@ -930,8 +935,10 @@ const SearchResults = () => {
                           fontWeight: 700,
                           fontSize: '1.1rem',
                           display: 'inline-block',
-                          boxShadow: '0 4px 12px #a084e844'
-                        }}>📞 Contact Us to Book Now!</a>
+                          boxShadow: '0 4px 12px #a084e844',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}>📞 Contact Us to Book Now!</button>
                       </div>
                     )}
                   </div>

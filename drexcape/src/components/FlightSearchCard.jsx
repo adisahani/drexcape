@@ -20,6 +20,7 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
     },
   ]);
   const [showCalendar, setShowCalendar] = React.useState(false);
+  const [validationError, setValidationError] = React.useState('');
 
   // Sample airport list
   const airportOptions = [
@@ -39,6 +40,26 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
   const formatDay = (date) => date.toLocaleDateString('en-GB', { weekday: 'long' });
 
   const handleSearch = () => {
+    // Clear previous validation errors
+    setValidationError('');
+
+    // Validate that both from and to locations are set
+    if (!from.trim()) {
+      setValidationError('Please select a departure location');
+      return;
+    }
+
+    if (!to.trim()) {
+      setValidationError('Please select a destination location');
+      return;
+    }
+
+    // Check if from and to are the same
+    if (from.trim() === to.trim()) {
+      setValidationError('Departure and destination cannot be the same');
+      return;
+    }
+
     const searchParams = {
       from,
       to,
@@ -58,6 +79,27 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
     }
   };
 
+  // Clear validation error when user starts typing
+  const handleFromChange = (e) => {
+    setFrom(e.target.value);
+    if (validationError) setValidationError('');
+  };
+
+  const handleToChange = (e) => {
+    setTo(e.target.value);
+    if (validationError) setValidationError('');
+  };
+
+  const handleFromSelect = (opt) => {
+    setFrom(`${opt.city} (${opt.code})`);
+    if (validationError) setValidationError('');
+  };
+
+  const handleToSelect = (opt) => {
+    setTo(`${opt.city} (${opt.code})`);
+    if (validationError) setValidationError('');
+  };
+
   return (
     <div className="flight-search-card">
       {/* From/To Inputs with overlapping swap button */}
@@ -66,10 +108,10 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
           <LocationInput
             label="From"
             value={from}
-            onChange={e => setFrom(e.target.value)}
+            onChange={handleFromChange}
             placeholder="From"
             options={airportOptions}
-            onSelect={opt => setFrom(`${opt.city} (${opt.code})`)}
+            onSelect={handleFromSelect}
           />
         </div>
         <button className="swap-btn overlap-swap-btn" aria-label="Swap From and To" onClick={() => { const temp = from; setFrom(to); setTo(temp); }}>
@@ -79,10 +121,10 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
           <LocationInput
             label="To"
             value={to}
-            onChange={e => setTo(e.target.value)}
+            onChange={handleToChange}
             placeholder="To"
             options={airportOptions}
-            onSelect={opt => setTo(`${opt.city} (${opt.code})`)}
+            onSelect={handleToSelect}
           />
         </div>
       </div>
@@ -118,8 +160,33 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
       </div>
       {/* Search Button */}
       <div className="search-btn-section">
-        <button className="search-btn" onClick={handleSearch}>Search</button>
+        <button 
+          className="search-btn" 
+          onClick={handleSearch}
+          disabled={!from.trim() || !to.trim()}
+          style={{
+            opacity: (!from.trim() || !to.trim()) ? 0.6 : 1,
+            cursor: (!from.trim() || !to.trim()) ? 'not-allowed' : 'pointer'
+          }}
+        >
+          Search
+        </button>
       </div>
+      {validationError && (
+        <div className="validation-error" style={{ 
+          color: '#ff4444', 
+          marginTop: '10px', 
+          textAlign: 'center',
+          fontSize: '0.9rem',
+          fontWeight: '500',
+          padding: '8px',
+          backgroundColor: 'rgba(255, 68, 68, 0.1)',
+          borderRadius: '6px',
+          border: '1px solid rgba(255, 68, 68, 0.3)'
+        }}>
+          ⚠️ {validationError}
+        </div>
+      )}
     </div>
   );
 };

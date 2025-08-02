@@ -25,7 +25,7 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
   console.log('  - forceOpen prop:', forceOpen);
   console.log('  - onFormSubmitted prop:', onFormSubmitted);
   
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(forceOpen); // Start with forceOpen value
   const [formData, setFormData] = useState({
     name: '',
     phone: ''
@@ -34,36 +34,15 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
 
+  // Always set open to true when forceOpen is true
   useEffect(() => {
     console.log('🎭 === PromotionalPopup useEffect called ===');
     console.log('  - forceOpen:', forceOpen);
-    console.log('  - Current cookies:', document.cookie);
-    console.log('  - open state:', open);
-    
-    // NEW LOGIC: Always show when forced, regardless of cookies
     if (forceOpen) {
-      console.log('🚀 Force opening popup');
+      console.log('🚀 Setting open to true because forceOpen is true');
       setOpen(true);
-      return;
     }
-    
-    // Existing auto-show logic for new visitors
-    const hasInteracted = getCookie('drexcape_popup_interacted');
-    console.log('  - hasInteracted:', hasInteracted);
-    if (!hasInteracted) {
-      console.log('⏰ Setting auto-show timer for 5 seconds');
-      const timer = setTimeout(() => setOpen(true), 5000);
-      return () => clearTimeout(timer);
-    } else {
-      console.log('❌ Not showing auto popup - user has interacted');
-    }
-  }, [forceOpen]); // Back to just forceOpen dependency
-
-  // NEW FUNCTION: Clear dismissal flag
-  const resetDismissal = () => {
-    console.log('🗑️ resetDismissal called - deleting popup interaction cookie');
-    deleteCookie('drexcape_popup_interacted');
-  };
+  }, []); // Run only on mount
 
   const handleClose = () => {
     console.log('❌ === handleClose called ===');
@@ -72,6 +51,12 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
     // Set cookie to 'dismissed' but don't prevent future forced opens
     setCookie('drexcape_popup_interacted', 'dismissed', 365);
     console.log('🍪 Set dismissed cookie - current cookies:', document.cookie);
+    
+    // Call the callback to close the parent component's state
+    if (onFormSubmitted) {
+      console.log('📞 Calling onFormSubmitted callback from handleClose');
+      onFormSubmitted();
+    }
   };
 
   const handleInputChange = (e) => {

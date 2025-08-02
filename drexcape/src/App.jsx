@@ -555,6 +555,9 @@ function App() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [budget, setBudget] = useState("");
+  
+  // State for promotional form
+  const [showContactForm, setShowContactForm] = useState(false);
 
   function handleTripSearch(e) {
     e.preventDefault();
@@ -562,6 +565,16 @@ function App() {
     console.log({ fromLocation, toLocation, startDate, endDate, budget });
     // TODO: Call backend or ChatGPT Nano here
   }
+
+  const handleContactFormSubmitted = () => {
+    setShowContactForm(false);
+    // You can add any additional logic here after form submission
+  };
+
+  const handleShowContactForm = () => {
+    console.log('🎭 === App.jsx handleShowContactForm called ===');
+    setShowContactForm(true);
+  };
 
   useEffect(() => {
     // Liquid, laggy spotlight
@@ -785,7 +798,7 @@ function App() {
           <p className="hero-description gsap-fade-in hero-desc-modern">
             AI-powered journeys, personalized for you.
           </p>
-          <button className="hero-cta-btn gsap-fade-in">
+          <button className="hero-cta-btn gsap-fade-in" onClick={handleShowContactForm}>
             Plan My Escape <ArrowForwardIosIcon style={{fontSize: '1.1em', marginLeft: '0.5em'}} />
           </button>
           {/* Replace glassy trip search form with new FlightSearchCard */}
@@ -837,7 +850,7 @@ function App() {
           <div className="offer-info">
             <h3>20% OFF</h3>
             <p>On all bookings till 28 September, 2023</p>
-            <button className="cta-primary">Book Now</button>
+            <button className="cta-primary" onClick={handleShowContactForm}>Book Now</button>
           </div>
         </div>
       </section>
@@ -848,7 +861,17 @@ function App() {
       </footer>
       
       {/* Promotional Popup */}
-      <PromotionalPopup />
+      {showContactForm && (
+        <>
+          {console.log('🎭 === App.jsx Rendering PromotionalPopup ===')}
+          {console.log('📦 showContactForm:', showContactForm)}
+          <PromotionalPopup
+            key={`popup-${Date.now()}`} // Force remount each time
+            onFormSubmitted={handleContactFormSubmitted}
+            forceOpen={true}
+          />
+        </>
+      )}
     </div>
         } />
         <Route path="/search-results" element={<SearchResults />} />

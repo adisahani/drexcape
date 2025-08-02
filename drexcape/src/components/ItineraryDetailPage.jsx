@@ -41,6 +41,7 @@ import {
   ContentCopy
 } from '@mui/icons-material';
 import drexcapeLogo from '../assets/drexcape-logo.png';
+import PromotionalPopup from './PromotionalPopup';
 
 // GooeyCursor component (same as main app)
 function GooeyCursor() {
@@ -128,6 +129,7 @@ const ItineraryDetailPage = () => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [headerImage, setHeaderImage] = useState('/default-travel.jpg');
   const [detailsLoading, setDetailsLoading] = useState(false);
+  const [showContactForm, setShowContactForm] = useState(false);
 
   // Get header image from location state or fetch from Pixabay
   const getHeaderImage = () => {
@@ -301,6 +303,16 @@ const ItineraryDetailPage = () => {
       console.log('Back to Search - No saved data, going to homepage');
       navigate('/');
     }
+  };
+
+  const handleContactFormSubmitted = () => {
+    setShowContactForm(false);
+    // You can add any additional logic here after form submission
+  };
+
+  const handleShowContactForm = () => {
+    console.log('🎭 === ItineraryDetailPage handleShowContactForm called ===');
+    setShowContactForm(true);
   };
 
   if (loading) {
@@ -888,8 +900,7 @@ const ItineraryDetailPage = () => {
               <Button
                 variant="contained"
                 size="large"
-                href={details.bookingLink}
-                target="_blank"
+                onClick={handleShowContactForm}
                 sx={{ 
                   px: 4, 
                   py: 2, 
@@ -989,6 +1000,19 @@ const ItineraryDetailPage = () => {
           50% { transform: translateY(-20px); }
         }
       `}</style>
+
+      {/* Promotional Popup */}
+      {showContactForm && (
+        <>
+          {console.log('🎭 === ItineraryDetailPage Rendering PromotionalPopup ===')}
+          {console.log('📦 showContactForm:', showContactForm)}
+          <PromotionalPopup
+            key={`popup-${Date.now()}`} // Force remount each time
+            onFormSubmitted={handleContactFormSubmitted}
+            forceOpen={true}
+          />
+        </>
+      )}
     </div>
   );
 };
