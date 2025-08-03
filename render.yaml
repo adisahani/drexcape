@@ -14,7 +14,7 @@ services:
     name: drexcape-frontend
     env: static
     buildCommand: cd drexcape && npm install --legacy-peer-deps && npm run build
-    staticPublishPath: drexcape/dist
+    staticPublishPath: dist
     envVars:
       - key: NODE_ENV
         value: production 
