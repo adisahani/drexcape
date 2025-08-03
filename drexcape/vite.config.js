@@ -5,7 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: '../dist',
+    outDir: 'dist',
     sourcemap: false,
     rollupOptions: {
       output: {
@@ -21,9 +21,9 @@ export default defineConfig({
     proxy: {
       '/api': {
         // Production Configuration
-        target: 'http://localhost:5000',
-        // // Development Configuration
-        // target: 'http://localhost:3001',
+        // target: 'http://localhost:5000',
+        // Development Configuration
+        target: 'http://localhost:3001',
         changeOrigin: true,
       },
     },
