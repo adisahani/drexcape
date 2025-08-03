@@ -311,9 +311,8 @@ const AdminBlogManager = () => {
               <Card sx={{ 
                 height: '450px',
                 width: '100%',
-                maxWidth: '100%',
-                minWidth: '280px',
                 maxWidth: '350px',
+                minWidth: '280px',
                 background: 'rgba(255, 255, 255, 0.95)',
                 backdropFilter: 'blur(10px)',
                 border: '1px solid rgba(160, 132, 232, 0.3)',

@@ -9,7 +9,7 @@
       "src": "drexcape/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "dist"
+        "distDir": "../dist"
       }
     }
   ],
@@ -20,7 +20,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "drexcape/dist/$1"
+      "dest": "dist/$1"
     }
   ],
   "env": {
