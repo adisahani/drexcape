@@ -70,7 +70,35 @@ router.get('/:slug', async (req, res) => {
       return res.status(404).json({ error: 'Itinerary not found' });
     }
     
-    // Check if user has access to this itinerary
+    // Check if this is a popular itinerary (allow public access)
+    const popularItineraries = await Itinerary.find({
+      slug: { $exists: true, $ne: null, $ne: '' },
+      title: { $exists: true, $ne: null, $ne: '' },
+      fromLocation: { $exists: true, $ne: null, $ne: '' },
+      toLocation: { $exists: true, $ne: null, $ne: '' },
+      headerImage: { $exists: true, $ne: null, $ne: '' }
+    })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('_id');
+    
+    const isPopularItinerary = popularItineraries.some(pop => pop._id.toString() === itinerary._id.toString());
+    
+    // Allow access if it's a popular itinerary
+    if (isPopularItinerary) {
+      console.log('Popular itinerary accessed, granting public access');
+      
+      // Track itinerary view
+      await req.trackItineraryView(
+        itinerary._id.toString(),
+        itinerary.slug,
+        0 // viewDuration will be calculated on frontend
+      );
+      
+      return res.json({ itinerary });
+    }
+    
+    // Check if user has access to this itinerary (for non-popular itineraries)
     const hasAccess = await checkItineraryAccess(req, itinerary._id.toString());
     
     if (!hasAccess) {

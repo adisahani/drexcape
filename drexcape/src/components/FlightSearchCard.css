@@ -14,8 +14,6 @@
   margin: 32px auto;
   max-width: 1100px;
   min-height: 80px;
-  margin-left: -30%;
-  margin-right: auto;
   text-align: left;
 }
 
@@ -289,10 +287,31 @@
     max-width: 90vw;
     padding: 16px 2vw;
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: 20px;
   }
-  /* You can add your small tweaks for mobile below this line */
+  
+  .date-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .date-display-row {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .search-btn-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .search-btn {
+    width: 100%;
+    max-width: 200px;
+  }
 }
 
 @media (max-width: 1024px) and (min-width: 701px) {
@@ -302,7 +321,29 @@
     max-width: 90vw;
     padding: 16px 2vw;
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     gap: 20px;
+  }
+  
+  .date-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .date-display-row {
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .search-btn-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .search-btn {
+    width: 100%;
+    max-width: 200px;
   }
 }

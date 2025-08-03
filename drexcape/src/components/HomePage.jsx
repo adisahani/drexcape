@@ -25,78 +25,6 @@ import { useNavigate } from 'react-router-dom';
 
 gsap.registerPlugin(ScrollTrigger);
 
-function GooeyCursor() {
-  const containerRef = useRef(null);
-  const blobRefs = [useRef(null), useRef(null), useRef(null)];
-  const [mouse, setMouse] = useState({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
-  // Each blob has its own trailing position
-  const positions = [useRef({ x: mouse.x, y: mouse.y }), useRef({ x: mouse.x, y: mouse.y }), useRef({ x: mouse.x, y: mouse.y })];
-  const lags = [0.18, 0.12, 0.08];
-
-  useEffect(() => {
-    // Detect touch device - only mobile/tablet, not desktop with touch
-    const checkTouchDevice = () => {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      return isMobile && hasTouch;
-    };
-    
-    const isTouch = checkTouchDevice();
-    setIsTouchDevice(isTouch);
-    
-    // Only add mouse event listener if not a touch device
-    if (!isTouch) {
-      const handleMove = (e) => setMouse({ x: e.clientX, y: e.clientY });
-      window.addEventListener('mousemove', handleMove);
-      let running = true;
-      function animate() {
-        positions.forEach((pos, i) => {
-          pos.current.x += (mouse.x - pos.current.x) * lags[i];
-          pos.current.y += (mouse.y - pos.current.y) * lags[i];
-          if (blobRefs[i].current) {
-            blobRefs[i].current.style.transform = `translate(${pos.current.x - 20}px, ${pos.current.y - 20}px)`;
-          }
-        });
-        if (running) requestAnimationFrame(animate);
-      }
-      animate();
-      return () => {
-        running = false;
-        window.removeEventListener('mousemove', handleMove);
-      };
-    }
-  }, [mouse.x, mouse.y]);
-
-  // Don't render anything on touch devices
-  if (isTouchDevice) {
-    return null;
-  }
-
-  return (
-    <>
-      {/* SVG Gooey Filter */}
-      <svg width="0" height="0">
-        <filter id="gooey-effect">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
-          <feColorMatrix in="blur" mode="matrix"
-            values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
-          <feBlend in="SourceGraphic" in2="goo" />
-        </filter>
-      </svg>
-      <div
-        ref={containerRef}
-        className="gooey-cursor-container"
-        style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', pointerEvents: 'none', zIndex: 99999, filter: 'url(#gooey-effect)' }}
-      >
-        <div ref={blobRefs[0]} className="gooey-blob blob-main" />
-        <div ref={blobRefs[1]} className="gooey-blob blob-side1" />
-        <div ref={blobRefs[2]} className="gooey-blob blob-side2" />
-      </div>
-    </>
-  );
-}
-
 function HeroBackground() {
   const [currentImage, setCurrentImage] = useState(0);
   const images = [beachSunset, mountainPeak, cityNight, forestTrail];
@@ -250,16 +178,29 @@ function PopularDestinationsSlider() {
     <Swiper
       modules={[Navigation, Pagination, A11y, Autoplay]}
       loop={true}
-      slidesPerView={5}
-      spaceBetween={40}
-      slidesPerGroup={2}
       navigation
       pagination={{ clickable: true }}
       autoplay={{ delay: 3000, disableOnInteraction: false }}
+      spaceBetween={20}
+      slidesPerView={'auto'}
+      centeredSlides={true}
       breakpoints={{
-        900: { slidesPerView: 5, slidesPerGroup: 2, spaceBetween: 40 },
-        700: { slidesPerView: 2, slidesPerGroup: 1, spaceBetween: 16 },
-        0: { slidesPerView: 1, slidesPerGroup: 1, spaceBetween: 8 },
+        320: { slidesPerView: 1, spaceBetween: 20, centeredSlides: true },
+        480: { slidesPerView: 1, spaceBetween: 20, centeredSlides: true },
+        768: { slidesPerView: 2, spaceBetween: 20, centeredSlides: true },
+        1024: { slidesPerView: 3, spaceBetween: 20, centeredSlides: true },
+        1200: { slidesPerView: 4, spaceBetween: 20, centeredSlides: true }
+      }}
+      style={{ 
+        visibility: 'visible', 
+        opacity: 1, 
+        display: 'block', 
+        minHeight: '400px',
+        overflow: 'hidden',
+        padding: '20px 0',
+        width: '100%',
+        margin: '0 auto',
+        maxWidth: '1400px'
       }}
     >
       {destinations.map(dest => (
@@ -323,9 +264,22 @@ function PopularSearchesSlider() {
     
     // Check if itinerary has valid slug
     if (itinerary.slug) {
-      console.log('📎 Navigating to slug URL:', `/itinerary/${itinerary.slug}`);
-      // Navigate directly to the itinerary detail page using slug
-      navigate(`/itinerary/${itinerary.slug}`);
+      console.log('📎 Navigating to slug URL with state data:', `/itinerary/${itinerary.slug}`);
+      // Navigate to the itinerary detail page with full itinerary data in state
+      // This avoids the need to fetch from database and bypasses access control
+      navigate(`/itinerary/${itinerary.slug}`, {
+        state: {
+          itineraryData: itinerary,
+          from: itinerary.fromLocation,
+          to: itinerary.toLocation,
+          departureDate: itinerary.departureDate,
+          returnDate: itinerary.returnDate,
+          travellers: 1,
+          travelClass: 'Economy',
+          itineraryId: itinerary._id,
+          imageUrl: itinerary.headerImage || '/default-travel.jpg'
+        }
+      });
     } else {
       console.log('⚠️ No valid slug, falling back to search results');
       // Fallback to search results if no slug
@@ -380,137 +334,110 @@ function PopularSearchesSlider() {
     );
   }
 
-      return (
-      <div style={{ 
-        visibility: 'visible', 
-        opacity: 1, 
-        display: 'block', 
-        minHeight: '400px', 
-        padding: '20px 0', 
-        overflow: 'visible'
-      }}>
-        <style>
-          {`
-            .swiper-slide {
-              height: auto !important;
-              overflow: visible !important;
-            }
-            .swiper-wrapper {
-              height: auto !important;
-              overflow: visible !important;
-            }
-            .swiper-container {
-              height: auto !important;
-              overflow: visible !important;
-            }
-          `}
-        </style>
+  return (
     <Swiper
       modules={[Navigation, Pagination, A11y, Autoplay]}
       loop={true}
-      slidesPerView={5}
-      spaceBetween={40}
-      slidesPerGroup={2}
       navigation
       pagination={{ clickable: true }}
       autoplay={{ delay: 3000, disableOnInteraction: false }}
+      spaceBetween={20}
+      slidesPerView={'auto'}
+      centeredSlides={true}
       breakpoints={{
-        900: { slidesPerView: 5, slidesPerGroup: 2, spaceBetween: 40 },
-        700: { slidesPerView: 2, slidesPerGroup: 1, spaceBetween: 16 },
-        0: { slidesPerView: 1, slidesPerGroup: 1, spaceBetween: 8 },
+        320: { slidesPerView: 1, spaceBetween: 20, centeredSlides: true },
+        480: { slidesPerView: 1, spaceBetween: 20, centeredSlides: true },
+        768: { slidesPerView: 2, spaceBetween: 20, centeredSlides: true },
+        1024: { slidesPerView: 3, spaceBetween: 20, centeredSlides: true },
+        1200: { slidesPerView: 4, spaceBetween: 20, centeredSlides: true }
       }}
       style={{ 
         visibility: 'visible', 
         opacity: 1, 
         display: 'block', 
-        minHeight: '350px',
+        minHeight: '400px',
         overflow: 'visible',
-        padding: '20px 0'
+        padding: '20px 0',
+        width: '100%',
+        margin: '0 auto',
+        maxWidth: '1400px'
       }}
     >
       {displayData.map((item, index) => {
         console.log('Rendering item:', item);
         return (
-          <SwiperSlide key={item._id || item.id || index} style={{ height: 'auto', overflow: 'visible' }}>
-                      <div 
-            className="destination-card glass gsap-fade-in"
-            onClick={() => {
-              console.log('🎯 Card clicked:', item);
-              if (item.slug) {
-                // Real itinerary with valid slug - navigate directly to detail page
-                console.log('📎 Navigating to slug URL:', `/itinerary/${item.slug}`);
-                navigate(`/itinerary/${item.slug}`);
-              } else if (item.fromLocation) {
-                // Real itinerary without slug - use search results
-                handleItineraryClick(item);
-              } else {
-                // Fallback data
-                const [from, to] = item.location.split(' → ');
-                navigate('/search-results', {
-                  state: {
-                    from: from,
-                    to: to,
-                    travellers: 1,
-                    travelClass: 'Economy'
-                  }
-                });
-              }
-            }}
-            style={{ 
-              cursor: 'pointer',
-              border: '2px solid rgba(255,255,255,0.2)',
-              backgroundColor: 'rgba(255,255,255,0.05)',
-              minHeight: '320px',
-              padding: '15px',
-              visibility: 'visible',
-              opacity: 1,
-              display: 'block',
-              position: 'relative',
-              zIndex: 10
-            }}
-          >
-                          <div 
-              className="destination-img" 
-              style={{
-                backgroundImage: `url(${item.headerImage || item.image || '/default-travel.jpg'})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                minHeight: '150px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                marginBottom: '15px'
+          <SwiperSlide key={item._id || item.id || index}>
+            <div 
+              className="destination-card glass gsap-fade-in"
+              onClick={() => {
+                console.log('🎯 Card clicked:', item);
+                if (item.slug) {
+                  // Real itinerary with valid slug - navigate directly to detail page
+                  console.log('📎 Navigating to slug URL:', `/itinerary/${item.slug}`);
+                  navigate(`/itinerary/${item.slug}`);
+                } else if (item.fromLocation) {
+                  // Real itinerary without slug - use search results
+                  handleItineraryClick(item);
+                } else {
+                  // Fallback data
+                  const [from, to] = item.location.split(' → ');
+                  navigate('/search-results', {
+                    state: {
+                      from: from,
+                      to: to,
+                      travellers: 1,
+                      travelClass: 'Economy'
+                    }
+                  });
+                }
               }}
-            />
-            <div className="destination-info" style={{ padding: '10px 0' }}>
-              <h3 style={{ marginBottom: '8px', fontSize: '1rem' }}>{item.title}</h3>
-              <p style={{ marginBottom: '10px', fontSize: '0.9rem' }}>{item.fromLocation ? `${item.fromLocation} → ${item.toLocation}` : item.location}</p>
-              <span className="rating" style={{ fontSize: '0.85rem' }}>
-                ⭐ {item.days ? `${item.days} days • ₹${item.price?.toLocaleString() || 'Contact for price'}` : item.rating}
-              </span>
+              style={{ 
+                cursor: 'pointer',
+                border: '2px solid rgba(255,255,255,0.2)',
+                backgroundColor: 'rgba(255,255,255,0.05)',
+                minHeight: '350px',
+                padding: '16px',
+                visibility: 'visible',
+                opacity: 1,
+                display: 'block',
+                position: 'relative',
+                zIndex: 1
+              }}
+            >
+              <div 
+                className="destination-img" 
+                style={{
+                  backgroundImage: `url(${item.headerImage || item.image || '/default-travel.jpg'})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  backgroundRepeat: 'no-repeat',
+                  minHeight: '180px',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  marginBottom: '15px'
+                }}
+              />
+              <div className="destination-info" style={{ padding: '10px 0' }}>
+                <h3 style={{ marginBottom: '8px', fontSize: '1rem' }}>{item.title}</h3>
+                <p style={{ marginBottom: '10px', fontSize: '0.9rem' }}>{item.fromLocation ? `${item.fromLocation} → ${item.toLocation}` : item.location}</p>
+                <span className="rating" style={{ fontSize: '0.85rem' }}>
+                  ⭐ {item.days ? `${item.days} days • ₹${item.price?.toLocaleString() || 'Contact for price'}` : item.rating}
+                </span>
+              </div>
             </div>
-          </div>
-        </SwiperSlide>
+          </SwiperSlide>
         );
       })}
     </Swiper>
-    </div>
   );
 }
 
 const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
-  // Spotlight effect
-  const spotlightRef = useRef(null)
+  // Refs for sections
   const heroRef = useRef(null)
   const destinationsRef = useRef(null)
   const categoriesRef = useRef(null)
   const stepsRef = useRef(null)
   const offersRef = useRef(null)
-
-  // For smooth spotlight trailing
-  const mouse = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
-  const spotlightPos = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2 })
-  const lastMove = useRef(Date.now())
-  const lagRef = useRef(0.18)
 
   // Function to handle search with user data
   const handleSearchWithUserData = (searchParams) => {
@@ -526,108 +453,41 @@ const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
   };
 
   useEffect(() => {
-    // Liquid, laggy spotlight
-    const handleMouseMove = (e) => {
-      mouse.current.x = e.clientX
-      mouse.current.y = e.clientY
-      lastMove.current = Date.now()
-      lagRef.current = 0.04 + Math.random() * 0.14
-      if (spotlightRef.current) {
-        gsap.to(spotlightRef.current, { opacity: 1, duration: 0.3, ease: 'power2.out' })
-      }
-    }
-    window.addEventListener('mousemove', handleMouseMove)
-
-    let animationFrameId
-    const lerp = (a, b, n) => a + (b - a) * n
-    const animate = () => {
-      spotlightPos.current.x = lerp(spotlightPos.current.x, mouse.current.x, lagRef.current)
-      spotlightPos.current.y = lerp(spotlightPos.current.y, mouse.current.y, lagRef.current)
-      const dx = Math.abs(spotlightPos.current.x - mouse.current.x)
-      const dy = Math.abs(spotlightPos.current.y - mouse.current.y)
-      const dist = Math.sqrt(dx*dx + dy*dy)
-      let scaleX = 1 + Math.min(dist/180, 0.25)
-      let scaleY = 1 - Math.min(dist/320, 0.18)
-      if (spotlightRef.current) {
-        spotlightRef.current.style.left = `${spotlightPos.current.x - 100}px`
-        spotlightRef.current.style.top = `${spotlightPos.current.y - 100}px`
-        gsap.to(spotlightRef.current, { scaleX, scaleY, duration: 0.18, overwrite: true })
-      }
-      if (spotlightRef.current) {
-        if (Date.now() - lastMove.current > 1500) {
-          gsap.to(spotlightRef.current, { opacity: 0, duration: 0.7, ease: 'power2.in' })
+    // GSAP animations for sections
+    gsap.utils.toArray('.gsap-fade-in').forEach((element, index) => {
+      gsap.fromTo(element, 
+        { opacity: 0, y: 50 },
+        { 
+          opacity: 1, 
+          y: 0, 
+          duration: 0.8, 
+          delay: index * 0.2,
+          ease: 'power2.out',
+          scrollTrigger: {
+            trigger: element,
+            start: 'top 80%',
+            end: 'bottom 20%',
+            toggleActions: 'play none none reverse'
+          }
         }
+      );
+    });
+
+    // Parallax effect for hero title
+    gsap.to('.hero-title', {
+      yPercent: -20,
+      ease: 'none',
+      scrollTrigger: {
+        trigger: '.hero',
+        start: 'top bottom',
+        end: 'bottom top',
+        scrub: true
       }
-      animationFrameId = requestAnimationFrame(animate)
-    }
-    animate()
+    });
+
+    // Cleanup function
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove)
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, [])
-
-  // Floating particles/stars effect
-  useEffect(() => {
-    const canvas = document.getElementById('star-canvas');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let width = window.innerWidth;
-    let height = window.innerHeight;
-    let dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.scale(dpr, dpr);
-
-    const STAR_COUNT = Math.floor(60 + Math.random() * 40);
-    const stars = Array.from({length: STAR_COUNT}).map(() => ({
-      x: Math.random() * width,
-      y: Math.random() * height,
-      r: 0.7 + Math.random() * 1.7,
-      speed: 0.1 + Math.random() * 0.25,
-      twinkle: Math.random() * Math.PI * 2,
-      color: `rgba(255,255,255,${0.5 + Math.random() * 0.5})`
-    }));
-
-    let running = true;
-    function animate() {
-      ctx.clearRect(0, 0, width, height);
-      for (let star of stars) {
-        // Twinkle
-        const tw = 0.5 + 0.5 * Math.sin(star.twinkle + Date.now() * 0.001 * star.speed * 2);
-        ctx.beginPath();
-        ctx.arc(star.x, star.y, star.r * tw, 0, Math.PI * 2);
-        ctx.fillStyle = star.color;
-        ctx.shadowColor = '#fff';
-        ctx.shadowBlur = 8 * tw;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        // Float
-        star.y -= star.speed * (0.3 + 0.7 * tw);
-        if (star.y < -2) star.y = height + 2;
-        star.x += Math.sin(Date.now() * 0.0002 + star.y * 0.01) * 0.08;
-      }
-      if (running) requestAnimationFrame(animate);
-    }
-    animate();
-    // Responsive
-    function handleResize() {
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = width * dpr;
-      canvas.height = height * dpr;
-      canvas.style.width = width + 'px';
-      canvas.style.height = height + 'px';
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.scale(dpr, dpr);
-    }
-    window.addEventListener('resize', handleResize);
-    return () => {
-      running = false;
-      window.removeEventListener('resize', handleResize);
+      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     };
   }, []);
 
@@ -650,8 +510,8 @@ const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
             opacity: 1, y: 0, stagger: 0.15, duration: 1, ease: 'power3.out',
             scrollTrigger: {
               trigger: ref.current,
-              start: 'top 80%',
-              toggleActions: 'play none none none',
+              start: "top 80%",
+              toggleActions: "play none none none",
             }
           }
         )
@@ -672,37 +532,14 @@ const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
         })
       })
     })
-    if (spotlightRef.current) {
-      gsap.to(spotlightRef.current, {
-        scale: 1.13,
-        repeat: -1,
-        yoyo: true,
-        duration: 0.7,
-        ease: 'sine.inOut',
-      })
-    }
   }, [])
 
   return (
     <>
-      <GooeyCursor />
-      {/* Glow spotlight under cursor */}
-      <div ref={spotlightRef} className="spotlight"></div>
-      <div className="background-gradient">
-        {/* Floating particles/stars */}
-        <canvas id="star-canvas" className="star-canvas"></canvas>
-        {/* Existing liquid blobs for extra depth */}
-        <svg className="liquid-blob blob1" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="180" ry="120" fill="#2a0140" fillOpacity="0.55"/></svg>
-        <svg className="liquid-blob blob2" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="140" ry="100" fill="#6d3bbd" fillOpacity="0.32"/></svg>
-        <svg className="liquid-blob blob3" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="120" ry="160" fill="#a084e8" fillOpacity="0.18"/></svg>
-        <svg className="liquid-blob blob4" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="100" ry="80" fill="#3a006a" fillOpacity="0.22"/></svg>
-      </div>
-      {/* Global parallax clouds */}
-      <ParallaxClouds />
-
       {/* Hero Section */}
       <section className="hero" id="home" ref={heroRef}>
         <HeroBackground />
+        <ParallaxClouds />
         <div className="hero-content hero-content-minimal">
           <h1 className="hero-title gsap-fade-in hero-title-modern">
             <span className="title-main">Hey Dreamer, <span className="magic-glow">Where Are We Flying Today?</span></span>
@@ -719,19 +556,16 @@ const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
           {/* Replace glassy trip search form with new FlightSearchCard */}
           <FlightSearchCard onSearchWithUserData={handleSearchWithUserData} />
         </div>
-        <div className="hero-visual">
-          {/* Placeholder for hero image or animation */}
-        </div>
       </section>
 
       {/* Popular Destinations */}
-      <section className="popular-destinations" id="destinations" ref={destinationsRef}>
+      <section className="popular-destinations full-width-section" id="destinations" ref={destinationsRef}>
         <h2 className="section-title gsap-fade-in">Popular Destinations</h2>
         <PopularDestinationsSlider />
       </section>
 
       {/* Popular Searches */}
-      <section className="categories-section" id="categories" ref={categoriesRef} style={{ visibility: 'visible', opacity: 1, display: 'block' }}>
+      <section className="categories-section full-width-section" id="categories" ref={categoriesRef} style={{ visibility: 'visible', opacity: 1, display: 'block' }}>
         <h2 className="section-title gsap-fade-in">Popular Searches</h2>
         <PopularSearchesSlider />
       </section>

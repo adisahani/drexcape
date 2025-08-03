@@ -73,6 +73,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Admin Routes */}
         <Route path="/admin" element={
           isAdminLoggedIn ? (
             <AdminDashboard onLogout={handleAdminLogout} />
@@ -80,79 +81,30 @@ function App() {
             <AdminLogin onLoginSuccess={handleAdminLogin} />
           )
         } />
-        <Route path="/" element={
-          <Layout 
-            isUserLoggedIn={isUserLoggedIn} 
-            userData={userData} 
-            onUserLogout={handleUserLogout}
-            showUserLogin={showUserLogin}
-            onCloseUserLogin={() => setShowUserLogin(false)}
-            onUserLoginSuccess={handleUserLogin}
-          >
+        
+        {/* Main App Routes with Unified Layout */}
+        <Route path="/" element={<Layout />}>
+          <Route index element={
             <HomePage 
               isUserLoggedIn={isUserLoggedIn} 
               onShowUserLogin={handleShowUserLogin} 
             />
-          </Layout>
-        } />
-        <Route path="/search-results" element={
-          <Layout 
-            isUserLoggedIn={isUserLoggedIn} 
-            userData={userData} 
-            onUserLogout={handleUserLogout}
-            showUserLogin={showUserLogin}
-            onCloseUserLogin={() => setShowUserLogin(false)}
-            onUserLoginSuccess={handleUserLogin}
-          >
-            <SearchResults />
-          </Layout>
-        } />
-        <Route path="/itinerary/:slug" element={
-          <Layout 
-            isUserLoggedIn={isUserLoggedIn} 
-            userData={userData} 
-            onUserLogout={handleUserLogout}
-            showUserLogin={showUserLogin}
-            onCloseUserLogin={() => setShowUserLogin(false)}
-            onUserLoginSuccess={handleUserLogin}
-          >
-            <ItineraryDetailPage />
-          </Layout>
-        } />
-        <Route path="/blog" element={
-          <Layout 
-            isUserLoggedIn={isUserLoggedIn} 
-            userData={userData} 
-            onUserLogout={handleUserLogout}
-            showUserLogin={showUserLogin}
-            onCloseUserLogin={() => setShowUserLogin(false)}
-            onUserLoginSuccess={handleUserLogin}
-          >
-            <BlogList />
-          </Layout>
-        } />
-        <Route path="/blog/:slug" element={
-          <Layout 
-            isUserLoggedIn={isUserLoggedIn} 
-            userData={userData} 
-            onUserLogout={handleUserLogout}
-            showUserLogin={showUserLogin}
-            onCloseUserLogin={() => setShowUserLogin(false)}
-            onUserLoginSuccess={handleUserLogin}
-          >
-            <BlogDetail />
-          </Layout>
-        } />
-        <Route path="/admin/blogs" element={
-          isAdminLoggedIn ? (
-            <AdminBlogManager />
-          ) : (
-            <AdminLogin onLoginSuccess={handleAdminLogin} />
-          )
-        } />
+          } />
+          <Route path="search-results" element={<SearchResults />} />
+          <Route path="itinerary/:slug" element={<ItineraryDetailPage />} />
+          <Route path="blog" element={<BlogList />} />
+          <Route path="blog/:slug" element={<BlogDetail />} />
+          <Route path="admin-blogs" element={
+            isAdminLoggedIn ? (
+              <AdminBlogManager />
+            ) : (
+              <AdminLogin onLoginSuccess={handleAdminLogin} />
+            )
+          } />
+        </Route>
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;
