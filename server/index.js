@@ -2,7 +2,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const connectDB = require('./config/db');
+
+// Import middleware first
+const { trackAIUsage } = require('./middleware/aiUsageTracker');
+const { activityTracker } = require('./middleware/activityTracker');
 
 // Connect to MongoDB (only if MONGODB_URI is provided)
 if (process.env.MONGODB_URI) {
@@ -15,6 +21,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Session middleware for user tracking with MongoDB store
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'drexcape-secret-key',
+  resave: false,
+  saveUninitialized: true,
+  store: MongoStore.create({ 
+    mongoUrl: process.env.MONGODB_URI,
+    collectionName: 'sessions',
+    ttl: 24 * 60 * 60 // 1 day in seconds
+  }),
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    httpOnly: true,
+    sameSite: 'lax'
+  }
+}));
+
+app.use(activityTracker);
+
 // Import routes
 const adminAuthRoutes = require('./routes/adminAuth');
 const adminDashboardRoutes = require('./routes/adminDashboard');
@@ -22,9 +48,40 @@ const userRoutes = require('./routes/users');
 const itineraryRoutes = require('./routes/itineraries');
 const promotionalLeadsRoutes = require('./routes/promotionalLeads');
 const blogRoutes = require('./routes/blogs');
+const analyticsRoutes = require('./routes/analytics');
 
-// Import middleware
-const { trackAIUsage } = require('./middleware/aiUsageTracker');
+// Debug endpoint for session inspection (development only)
+if (process.env.NODE_ENV === 'development') {
+  app.get('/api/debug/session', (req, res) => {
+    res.json({
+      sessionId: req.sessionID,
+      sessionData: req.session,
+      cookies: req.headers.cookie,
+      userAgent: req.headers['user-agent']
+    });
+  });
+}
+
+// Check user access status
+app.get('/api/user/access-status', (req, res) => {
+  try {
+    const hasSessionAccess = !!(req.session?.userId || req.session?.userPhone);
+    const hasCookieAccess = req.headers.cookie && req.headers.cookie.includes('drexcape_user_data');
+    
+    res.json({
+      hasAccess: hasSessionAccess || hasCookieAccess,
+      sessionAccess: hasSessionAccess,
+      cookieAccess: hasCookieAccess,
+      sessionData: {
+        userId: req.session?.userId,
+        userPhone: req.session?.userPhone
+      }
+    });
+  } catch (error) {
+    console.error('Error checking access status:', error);
+    res.status(500).json({ error: 'Failed to check access status' });
+  }
+});
 
 // Import models
 const Itinerary = require('./models/Itinerary');
@@ -42,6 +99,8 @@ app.post('/api/generate-itinerary', trackAIUsage('generate-itinerary'), async (r
   const { from, to, departureDate, returnDate, travellers, travelClass } = req.body;
   
   console.log('Received dates:', { departureDate, returnDate });
+  
+  const startTime = Date.now();
 
   // Calculate days from dates with validation
   const startDate = new Date(departureDate);
@@ -204,12 +263,25 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
       }
     }
 
+    const processingTime = Date.now() - startTime;
+    
+    // Track the search activity
+    await req.trackSearch(
+      { from, to, departureDate, returnDate, travellers, travelClass },
+      processingTime,
+      savedItineraries.length
+    );
+    
     res.json({ 
       itineraries: savedItineraries,
       message: 'Itineraries generated and saved successfully'
     });
   } catch (error) {
     console.error(error?.response?.data || error);
+    
+    // Track error
+    await req.trackError('itinerary_generation', error.toString(), 'generate_itinerary');
+    
     res.status(500).json({ error: error.toString() });
   }
 });
@@ -470,6 +542,9 @@ app.use('/api/promotional-leads', promotionalLeadsRoutes);
 
 // Blog routes
 app.use('/api/blogs', blogRoutes);
+
+// Analytics routes
+app.use('/api/analytics', analyticsRoutes);
 
 const PORT = 3001;
 app.listen(PORT, () => {

@@ -21,10 +21,32 @@ export const deleteCookie = (name) => {
 };
 
 // Contact form specific functions
-export const hasUserFilledContactForm = () => {
+export const hasUserFilledContactForm = async () => {
+  try {
+    // First check with backend API for session-based access
+    const response = await fetch('/api/user/access-status', {
+      method: 'GET',
+      credentials: 'include' // Include cookies for session
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('🔍 === hasUserFilledContactForm API check ===');
+      console.log('  - API Response:', data);
+      console.log('  - hasAccess:', data.hasAccess);
+      
+      if (data.hasAccess) {
+        return true;
+      }
+    }
+  } catch (error) {
+    console.log('API check failed, falling back to cookie check:', error);
+  }
+  
+  // Fallback to cookie check for backward compatibility
   const userData = getCookie('drexcape_user_data');
   const popupInteracted = getCookie('drexcape_popup_interacted');
-  console.log('🔍 === hasUserFilledContactForm check ===');
+  console.log('🔍 === hasUserFilledContactForm cookie fallback ===');
   console.log('  - userData:', userData);
   console.log('  - popupInteracted:', popupInteracted);
   console.log('  - Result:', userData && popupInteracted === 'submitted');

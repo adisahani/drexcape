@@ -42,6 +42,8 @@ import {
 } from '@mui/icons-material';
 import drexcapeLogo from '../assets/drexcape-logo.png';
 import PromotionalPopup from './PromotionalPopup';
+import UserLogin from './UserLogin';
+import { getCookie, hasUserFilledContactForm } from '../utils/cookies';
 
 // GooeyCursor component (same as main app)
 function GooeyCursor() {
@@ -130,6 +132,19 @@ const ItineraryDetailPage = () => {
   const [headerImage, setHeaderImage] = useState('/default-travel.jpg');
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
+  const [userData, setUserData] = useState(null);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const token = localStorage.getItem('userToken');
+    const storedUserData = localStorage.getItem('userData');
+    
+    if (token && storedUserData) {
+      setIsUserLoggedIn(true);
+      setUserData(JSON.parse(storedUserData));
+    }
+  }, []);
 
   // Get header image from location state or fetch from Pixabay
   const getHeaderImage = () => {
@@ -310,122 +325,60 @@ const ItineraryDetailPage = () => {
     // You can add any additional logic here after form submission
   };
 
-  const handleShowContactForm = () => {
+  const handleShowContactForm = async () => {
     console.log('🎭 === ItineraryDetailPage handleShowContactForm called ===');
-    setShowContactForm(true);
+    
+    try {
+      // Check if user has already submitted the promotional form
+      const hasAccess = await hasUserFilledContactForm();
+      
+      if (hasAccess) {
+        console.log('👤 User has access, skipping contact form');
+        // User has already submitted form, don't show it again
+        return;
+      }
+      
+      // Only show form if user hasn't submitted it yet
+      setShowContactForm(true);
+    } catch (error) {
+      console.error('Error checking user access:', error);
+      // Fallback: show contact form
+      setShowContactForm(true);
+    }
   };
 
   if (loading) {
     return (
-      <div className="app">
-        <GooeyCursor />
-        <div className="background-gradient">
-          <canvas id="star-canvas" className="star-canvas"></canvas>
-          <svg className="liquid-blob blob1" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="180" ry="120" fill="#2a0140" fillOpacity="0.55"/></svg>
-          <svg className="liquid-blob blob2" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="140" ry="100" fill="#6d3bbd" fillOpacity="0.32"/></svg>
-          <svg className="liquid-blob blob3" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="120" ry="160" fill="#a084e8" fillOpacity="0.18"/></svg>
-          <svg className="liquid-blob blob4" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="100" ry="80" fill="#3a006a" fillOpacity="0.22"/></svg>
-        </div>
-        
-        {/* Header */}
-        <header className="header">
-          <div className="header-content">
-            <div className="logo-container">
-              <img src={drexcapeLogo} alt="Drexcape" className="logo" />
-            </div>
-            <nav className="nav">
-              <a href="/" className="nav-link">Home</a>
-              <a href="#destinations" className="nav-link">Destinations</a>
-              <a href="#categories" className="nav-link">Categories</a>
-              <a href="#offers" className="nav-link">Offers</a>
-              <a href="#contact" className="nav-link">Contact</a>
-            </nav>
-          </div>
-        </header>
-
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" sx={{ mt: 8 }}>
-          <CircularProgress sx={{ color: '#a084e8' }} />
-        </Box>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh" sx={{ mt: 8 }}>
+        <CircularProgress sx={{ color: '#a084e8' }} />
+      </Box>
     );
   }
 
   if (error || !itinerary) {
     return (
-      <div className="app">
-        <GooeyCursor />
-        <div className="background-gradient">
-          <canvas id="star-canvas" className="star-canvas"></canvas>
-          <svg className="liquid-blob blob1" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="180" ry="120" fill="#2a0140" fillOpacity="0.55"/></svg>
-          <svg className="liquid-blob blob2" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="140" ry="100" fill="#6d3bbd" fillOpacity="0.32"/></svg>
-          <svg className="liquid-blob blob3" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="120" ry="160" fill="#a084e8" fillOpacity="0.18"/></svg>
-          <svg className="liquid-blob blob4" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="100" ry="80" fill="#3a006a" fillOpacity="0.22"/></svg>
-        </div>
-        
-        {/* Header */}
-        <header className="header">
-          <div className="header-content">
-            <div className="logo-container">
-              <img src={drexcapeLogo} alt="Drexcape" className="logo" />
-            </div>
-            <nav className="nav">
-              <a href="/" className="nav-link">Home</a>
-              <a href="#destinations" className="nav-link">Destinations</a>
-              <a href="#categories" className="nav-link">Categories</a>
-              <a href="#offers" className="nav-link">Offers</a>
-              <a href="#contact" className="nav-link">Contact</a>
-            </nav>
-          </div>
-        </header>
-
-        <Container maxWidth="md" sx={{ py: 4, mt: 8 }}>
-          <Alert severity="error" sx={{ mb: 2 }}>{error || 'Itinerary not found'}</Alert>
-          <Button
-            startIcon={<ArrowBack />}
-            onClick={() => navigate('/')}
-            sx={{ 
-              mt: 2,
-              background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
-              color: '#fff',
-              '&:hover': {
-                background: 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)',
-              }
-            }}
-          >
-            Back to Home
-          </Button>
-        </Container>
-      </div>
+      <Container maxWidth="md" sx={{ py: 4, mt: 8 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>{error || 'Itinerary not found'}</Alert>
+        <Button
+          startIcon={<ArrowBack />}
+          onClick={() => navigate('/')}
+          sx={{ 
+            mt: 2,
+            background: 'linear-gradient(90deg, #a084e8 0%, #6d3bbd 100%)',
+            color: '#fff',
+            '&:hover': {
+              background: 'linear-gradient(90deg, #6d3bbd 0%, #a084e8 100%)',
+            }
+          }}
+        >
+          Back to Home
+        </Button>
+      </Container>
     );
   }
 
   return (
-    <div className="app">
-      <GooeyCursor />
-      <div className="background-gradient">
-        <canvas id="star-canvas" className="star-canvas"></canvas>
-        <svg className="liquid-blob blob1" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="180" ry="120" fill="#2a0140" fillOpacity="0.55"/></svg>
-        <svg className="liquid-blob blob2" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="140" ry="100" fill="#6d3bbd" fillOpacity="0.32"/></svg>
-        <svg className="liquid-blob blob3" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="120" ry="160" fill="#a084e8" fillOpacity="0.18"/></svg>
-        <svg className="liquid-blob blob4" viewBox="0 0 400 400" width="400" height="400"><ellipse cx="200" cy="200" rx="100" ry="80" fill="#3a006a" fillOpacity="0.22"/></svg>
-      </div>
-      
-      {/* Header */}
-      <header className="header">
-        <div className="header-content">
-          <div className="logo-container">
-            <img src={drexcapeLogo} alt="Drexcape" className="logo" />
-          </div>
-          <nav className="nav">
-            <a href="/" className="nav-link">Home</a>
-            <a href="#destinations" className="nav-link">Destinations</a>
-            <a href="#categories" className="nav-link">Categories</a>
-            <a href="#offers" className="nav-link">Offers</a>
-            <a href="#contact" className="nav-link">Contact</a>
-          </nav>
-        </div>
-      </header>
-
+    <>
       {/* Hero Header with Cloudinary Image */}
       <Box
         sx={{
@@ -628,7 +581,65 @@ const ItineraryDetailPage = () => {
         </Paper>
 
         {/* Detailed Information */}
-        {detailsLoading ? (
+        {!isUserLoggedIn ? (
+          // Login prompt for non-logged-in users
+          <Paper 
+            elevation={3} 
+            sx={{ 
+              p: 4, 
+              mb: 4,
+              background: 'rgba(255, 255, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: 3
+            }}
+          >
+            <Box sx={{ textAlign: 'center', py: 4 }}>
+              <Typography 
+                variant="h4" 
+                sx={{
+                  fontFamily: 'Rajdhani, Orbitron, sans-serif',
+                  fontWeight: 700,
+                  color: '#2a0140',
+                  mb: 3
+                }}
+              >
+                🔒 Login Required
+              </Typography>
+              
+              <Typography 
+                variant="body1" 
+                sx={{
+                  color: '#666',
+                  maxWidth: '500px',
+                  margin: '0 auto 30px',
+                  fontSize: '1.1rem'
+                }}
+              >
+                Please login to view the complete detailed itinerary with day-wise plans, accommodation details, and booking information.
+              </Typography>
+              
+              <Button
+                variant="contained"
+                size="large"
+                onClick={() => setShowContactForm(true)}
+                sx={{ 
+                  px: 4, 
+                  py: 2, 
+                  fontSize: '1.1rem',
+                  fontFamily: 'Rajdhani, Orbitron, sans-serif',
+                  fontWeight: 700,
+                  background: 'linear-gradient(45deg, #a084e8 30%, #6d3bbd 90%)',
+                  '&:hover': {
+                    background: 'linear-gradient(45deg, #6d3bbd 30%, #a084e8 90%)',
+                  }
+                }}
+              >
+                📝 Login to Continue
+              </Button>
+            </Box>
+          </Paper>
+        ) : detailsLoading ? (
           <Paper 
             elevation={3} 
             sx={{ 
@@ -1001,19 +1012,26 @@ const ItineraryDetailPage = () => {
         }
       `}</style>
 
-      {/* Promotional Popup */}
+      {/* User Login Popup */}
       {showContactForm && (
         <>
-          {console.log('🎭 === ItineraryDetailPage Rendering PromotionalPopup ===')}
+          {console.log('🎭 === ItineraryDetailPage Rendering UserLogin ===')}
           {console.log('📦 showContactForm:', showContactForm)}
-          <PromotionalPopup
-            key={`popup-${Date.now()}`} // Force remount each time
-            onFormSubmitted={handleContactFormSubmitted}
+          <UserLogin
+            key={`login-${Date.now()}`} // Force remount each time
+            onLoginSuccess={(userData) => {
+              console.log('✅ User logged in:', userData);
+              setShowContactForm(false);
+              setIsUserLoggedIn(true);
+              setUserData(userData);
+            }}
+            onClose={() => setShowContactForm(false)}
             forceOpen={true}
+            isUserLoggedIn={isUserLoggedIn}
           />
         </>
       )}
-    </div>
+    </>
   );
 };
 

@@ -1,215 +1,221 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const Itinerary = require('../models/Itinerary');
-const { auth } = require('../middleware/auth');
-
+const { activityTracker } = require('../middleware/activityTracker');
 const router = express.Router();
 
-// Register new user or get existing user
+// Apply activity tracker middleware
+router.use(activityTracker);
+
+// Register new user
 router.post('/register', async (req, res) => {
   try {
-    const { name, phone, email, marketingConsent, newsletterSubscription, searchData } = req.body;
+    const { name, phone, email, password } = req.body;
 
-    // Validate required fields
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'Name and phone number are required.' });
+    // Check if user already exists
+    const existingUser = await User.findOne({ phone });
+    if (existingUser) {
+      return res.status(400).json({ error: 'User with this phone number already exists' });
     }
 
-    // Check if user already exists by phone
-    let user = await User.findOne({ phone });
+    // Create new user
+    const user = new User({
+      name,
+      phone,
+      email,
+      password
+    });
 
-    if (user) {
-      // Update existing user's information
-      user.name = name;
-      if (email) user.email = email;
-      user.marketingConsent = marketingConsent;
-      user.newsletterSubscription = newsletterSubscription;
-      user.lastActivity = new Date();
-      
-      // Add search data if provided
-      if (searchData) {
-        await user.addSearch({
-          from: searchData.from,
-          to: searchData.to,
-          departureDate: searchData.departureDate,
-          returnDate: searchData.returnDate,
-          travellers: searchData.travellers,
-          travelClass: searchData.travelClass,
-          resultsCount: 0
-        });
-      }
+    await user.save();
 
-      await user.save();
-    } else {
-      // Create new user
-      user = new User({
-        name,
-        phone,
-        email,
-        marketingConsent,
-        newsletterSubscription
-      });
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, phone: user.phone },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
+    );
 
-      // Add search data if provided
-      if (searchData) {
-        await user.addSearch({
-          from: searchData.from,
-          to: searchData.to,
-          departureDate: searchData.departureDate,
-          returnDate: searchData.returnDate,
-          travellers: searchData.travellers,
-          travelClass: searchData.travelClass,
-          resultsCount: 0
-        });
-      }
+    // Track form submission
+    req.trackFormSubmission('user_registration', { name, phone, email }, 'api');
 
-      await user.save();
-    }
-
-    res.json({
-      message: 'User data saved successfully',
+    res.status(201).json({
+      message: 'User registered successfully',
+      token,
       user: {
-        userId: user.userId,
+        id: user._id,
         name: user.name,
         phone: user.phone,
-        email: user.email
+        email: user.email,
+        userId: user.userId
       }
     });
   } catch (error) {
-    console.error('User registration error:', error);
-    res.status(500).json({ error: 'Failed to save user data.' });
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
   }
 });
 
-// Track user search
-router.post('/track-search', async (req, res) => {
+// Login user
+router.post('/login', async (req, res) => {
   try {
-    const { userId, searchData } = req.body;
+    const { phone, password } = req.body;
 
-    if (!userId || !searchData) {
-      return res.status(400).json({ error: 'User ID and search data are required.' });
-    }
-
-    const user = await User.findOne({ userId });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    await user.addSearch(searchData);
-
-    res.json({ message: 'Search tracked successfully' });
-  } catch (error) {
-    console.error('Search tracking error:', error);
-    res.status(500).json({ error: 'Failed to track search.' });
-  }
-});
-
-// Track itinerary view
-router.post('/track-view', async (req, res) => {
-  try {
-    const { userId, itineraryId, timeSpent } = req.body;
-
-    if (!userId || !itineraryId) {
-      return res.status(400).json({ error: 'User ID and itinerary ID are required.' });
-    }
-
-    const user = await User.findOne({ userId });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    await user.addViewedItinerary(itineraryId, timeSpent);
-
-    // Update itinerary views
-    await Itinerary.findOneAndUpdate(
-      { itineraryId },
-      { 
-        $inc: { views: 1 },
-        lastViewed: new Date()
-      }
-    );
-
-    res.json({ message: 'View tracked successfully' });
-  } catch (error) {
-    console.error('View tracking error:', error);
-    res.status(500).json({ error: 'Failed to track view.' });
-  }
-});
-
-// Track itinerary share
-router.post('/track-share', async (req, res) => {
-  try {
-    const { userId, itineraryId } = req.body;
-
-    if (!userId || !itineraryId) {
-      return res.status(400).json({ error: 'User ID and itinerary ID are required.' });
-    }
-
-    const user = await User.findOne({ userId });
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    await user.markItineraryShared(itineraryId);
-
-    // Update itinerary shares
-    await Itinerary.findOneAndUpdate(
-      { itineraryId },
-      { $inc: { shares: 1 } }
-    );
-
-    res.json({ message: 'Share tracked successfully' });
-  } catch (error) {
-    console.error('Share tracking error:', error);
-    res.status(500).json({ error: 'Failed to track share.' });
-  }
-});
-
-// Get user by phone number
-router.get('/by-phone/:phone', async (req, res) => {
-  try {
-    const { phone } = req.params;
+    // Find user by phone
     const user = await User.findOne({ phone });
-
     if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Check password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({ error: 'Account is deactivated' });
+    }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { userId: user._id, phone: user.phone },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '7d' }
+    );
+
+    // Update last activity
+    user.lastActivity = new Date();
+    await user.save();
+
+    // Track login activity
+    req.trackFormSubmission('user_login', { phone }, 'api');
+
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        userId: user.userId
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Get user profile
+router.get('/profile', async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Access denied. No token provided.' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const user = await User.findById(decoded.userId).select('-password');
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
     }
 
     res.json({ user });
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Failed to get user.' });
+    console.error('Profile fetch error:', error);
+    res.status(401).json({ error: 'Invalid token' });
   }
 });
 
-// Admin routes (protected)
-router.get('/admin/users', auth, async (req, res) => {
+// Update user profile
+router.put('/profile', async (req, res) => {
   try {
-    const users = await User.find({})
-      .select('-__v')
-      .sort({ createdAt: -1 })
-      .limit(100);
-
-    res.json({ users });
-  } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json({ error: 'Failed to get users.' });
-  }
-});
-
-router.get('/admin/users/:userId', auth, async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const user = await User.findOne({ userId }).select('-__v');
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    res.json({ user });
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const user = await User.findById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    const { name, email, preferences } = req.body;
+
+    // Update allowed fields
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (preferences) user.preferences = { ...user.preferences, ...preferences };
+
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        userId: user.userId,
+        preferences: user.preferences
+      }
+    });
   } catch (error) {
-    console.error('Get user error:', error);
-    res.status(500).json({ error: 'Failed to get user.' });
+    console.error('Profile update error:', error);
+    res.status(500).json({ error: 'Profile update failed' });
+  }
+});
+
+// Get user search history
+router.get('/search-history', async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Access denied. No token provided.' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const user = await User.findById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    res.json({ searchHistory: user.searchHistory });
+  } catch (error) {
+    console.error('Search history error:', error);
+    res.status(500).json({ error: 'Failed to fetch search history' });
+  }
+});
+
+// Get user viewed itineraries
+router.get('/viewed-itineraries', async (req, res) => {
+  try {
+    const token = req.header('Authorization')?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({ error: 'Access denied. No token provided.' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const user = await User.findById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ error: 'User not found' });
+    }
+
+    res.json({ viewedItineraries: user.viewedItineraries });
+  } catch (error) {
+    console.error('Viewed itineraries error:', error);
+    res.status(500).json({ error: 'Failed to fetch viewed itineraries' });
   }
 });
 

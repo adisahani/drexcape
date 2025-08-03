@@ -1,6 +1,7 @@
 const express = require('express');
 const Itinerary = require('../models/Itinerary');
 const ItineraryDetails = require('../models/ItineraryDetails');
+const { checkItineraryAccess } = require('../middleware/activityTracker');
 
 const router = express.Router();
 
@@ -60,7 +61,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get itinerary by slug
+// Get itinerary by slug with access control
 router.get('/:slug', async (req, res) => {
   try {
     const itinerary = await Itinerary.findOne({ slug: req.params.slug });
@@ -68,6 +69,26 @@ router.get('/:slug', async (req, res) => {
     if (!itinerary) {
       return res.status(404).json({ error: 'Itinerary not found' });
     }
+    
+    // Check if user has access to this itinerary
+    const hasAccess = await checkItineraryAccess(req, itinerary._id.toString());
+    
+    if (!hasAccess) {
+      // Return locked state with redirect info
+      return res.status(403).json({ 
+        error: 'Access denied',
+        locked: true,
+        message: 'Please fill the promotional form to access this itinerary',
+        redirectUrl: '/form?redirect=/itinerary/' + req.params.slug
+      });
+    }
+    
+    // Track itinerary view
+    await req.trackItineraryView(
+      itinerary._id.toString(),
+      itinerary.slug,
+      0 // viewDuration will be calculated on frontend
+    );
     
     res.json({ itinerary });
   } catch (error) {

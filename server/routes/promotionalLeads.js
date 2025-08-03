@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const PromotionalLead = require('../models/PromotionalLead');
+const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 
 // Submit promotional form
@@ -30,6 +31,32 @@ router.post('/submit', async (req, res) => {
 
     await lead.save();
 
+    // Create or update user record
+    let user = await User.findOne({ phone });
+    if (!user) {
+      user = new User({
+        name,
+        phone,
+        email: '', // Optional
+        marketingConsent: true,
+        newsletterSubscription: true,
+        lastActivity: new Date()
+      });
+    } else {
+      // Update existing user
+      user.name = name;
+      user.lastActivity = new Date();
+    }
+    await user.save();
+
+    // Set user ID in session for activity tracking
+    req.session = req.session || {};
+    req.session.userId = user._id.toString();
+    req.session.userPhone = phone;
+
+    // Track form submission
+    await req.trackFormSubmission('promotional', { name, phone }, req.get('Referer') || 'direct');
+
     res.status(201).json({ 
       success: true, 
       message: 'Thank you! We\'ll contact you soon.',
@@ -38,6 +65,10 @@ router.post('/submit', async (req, res) => {
 
   } catch (error) {
     console.error('Error submitting promotional lead:', error);
+    
+    // Track error
+    await req.trackError('form_submission', error.toString(), 'promotional_form');
+    
     res.status(500).json({ error: 'Failed to submit form' });
   }
 });

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   // Basic user information
@@ -19,12 +20,20 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     sparse: true // Allow multiple null values
   },
+  password: {
+    type: String,
+    required: true,
+    minlength: 6
+  },
 
   // User identification
   userId: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    default: function() {
+      return `USER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    }
   },
 
   // User preferences and settings
@@ -110,11 +119,17 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Generate unique userId
+// Generate unique userId (backup in case default doesn't work)
 userSchema.pre('save', async function(next) {
   if (!this.userId) {
     this.userId = `USER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
+  
+  // Hash password before saving
+  if (this.isModified('password')) {
+    this.password = await bcrypt.hash(this.password, 10);
+  }
+  
   next();
 });
 
@@ -149,6 +164,11 @@ userSchema.methods.markItineraryShared = function(itineraryId) {
     return this.save();
   }
   return this;
+};
+
+// Compare password method
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
 };
 
 // Indexes for efficient queries (only add non-unique indexes here)

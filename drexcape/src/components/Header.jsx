@@ -1,75 +1,27 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import drexcapeLogo from '../assets/drexcape-logo.png';
+import UserProfile from './UserProfile';
 
-const Header = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const handleNavClick = (e, path) => {
-    e.preventDefault();
-    navigate(path);
-  };
-
-  const isActive = (path) => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
-    return location.pathname.startsWith(path);
-  };
-
+const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
   return (
     <header className="header">
-      <div className="logo">
-        <img 
-          src={drexcapeLogo} 
-          alt="DrexCape" 
-          onClick={() => navigate('/')}
-          style={{ 
-            cursor: 'pointer',
-            height: '50px',
-            width: 'auto',
-            maxWidth: '200px'
-          }}
-        />
+      <div className="header-content">
+        <div className="logo-container">
+          <img src={drexcapeLogo} alt="Drexcape" className="logo" />
+        </div>
+        <nav className="nav">
+          <a href="/" className="nav-link">Home</a>
+          <a href="/#destinations" className="nav-link">Destinations</a>
+          <a href="/#categories" className="nav-link">Categories</a>
+          <a href="/#offers" className="nav-link">Offers</a>
+          <a href="/blog" className="nav-link">Blog</a>
+          <a href="/#contact" className="nav-link">Contact</a>
+        </nav>
+        {/* User Profile Section */}
+        {isUserLoggedIn && userData && (
+          <UserProfile userData={userData} onLogout={onUserLogout} />
+        )}
       </div>
-      <nav className="nav">
-        <a 
-          href="/" 
-          className={`nav-link ${isActive('/') ? 'active' : ''}`}
-          onClick={(e) => handleNavClick(e, '/')}
-        >
-          Home
-        </a>
-        <a 
-          href="/about" 
-          className={`nav-link ${isActive('/about') ? 'active' : ''}`}
-          onClick={(e) => handleNavClick(e, '/about')}
-        >
-          About
-        </a>
-        <a 
-          href="/services" 
-          className={`nav-link ${isActive('/services') ? 'active' : ''}`}
-          onClick={(e) => handleNavClick(e, '/services')}
-        >
-          Services
-        </a>
-        <a 
-          href="/contact" 
-          className={`nav-link ${isActive('/contact') ? 'active' : ''}`}
-          onClick={(e) => handleNavClick(e, '/contact')}
-        >
-          Contact
-        </a>
-        <a 
-          href="/blog" 
-          className={`nav-link ${isActive('/blog') ? 'active' : ''}`}
-          onClick={(e) => handleNavClick(e, '/blog')}
-        >
-          Blog
-        </a>
-      </nav>
     </header>
   );
 };

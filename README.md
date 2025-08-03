@@ -33,8 +33,8 @@ A full-stack web application for generating personalized travel itineraries usin
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/adisahani/drexcape-deploy.git
-   cd drexcape-deploy
+   git clone <your-new-repository-url>
+   cd drexcape
    ```
 
 2. **Install dependencies**
