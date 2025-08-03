@@ -25,7 +25,7 @@ import {
   CalendarToday as CalendarIcon,
   ContentCopy as CopyIcon
 } from '@mui/icons-material';
-import Header from './Header';
+
 
 const BlogDetail = () => {
   const { slug } = useParams();
@@ -173,8 +173,7 @@ const BlogDetail = () => {
         background: 'rgba(58, 0, 106, 0.05)',
         backdropFilter: 'blur(10px)'
       }}>
-        {/* Header */}
-        <Header />
+
         
         <Box sx={{ 
           maxWidth: 800, 
@@ -215,8 +214,7 @@ const BlogDetail = () => {
       background: 'rgba(58, 0, 106, 0.05)',
       backdropFilter: 'blur(10px)'
     }}>
-      {/* Header */}
-      <Header />
+
       
       <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 3, pt: 12 }}>
         {/* Back Button */}

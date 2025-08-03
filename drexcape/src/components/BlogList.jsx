@@ -28,7 +28,7 @@ import {
   ArrowBack as ArrowBackIcon,
   ContentCopy as CopyIcon
 } from '@mui/icons-material';
-import Header from './Header';
+
 
 const BlogList = () => {
   const navigate = useNavigate();
@@ -208,8 +208,7 @@ const BlogList = () => {
       background: 'rgba(58, 0, 106, 0.05)',
       backdropFilter: 'blur(10px)'
     }}>
-      {/* Header */}
-      <Header />
+
       
       <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3, pt: 12 }}>
         {/* Back to Home Button */}
@@ -230,29 +229,7 @@ const BlogList = () => {
           Back to Home
         </Button>
 
-        {/* Header */}
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h3" component="h1" sx={{ 
-            fontWeight: 'bold',
-            fontFamily: 'Orbitron, monospace',
-            background: 'linear-gradient(45deg, #a084e8, #6d3bbd)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            mb: 2,
-            fontSize: { xs: '2rem', md: '3rem' }
-          }}>
-            ✈️ Travel Blog
-          </Typography>
-          <Typography variant="h6" sx={{ 
-            color: '#333333',
-            mb: 4,
-            fontFamily: 'Rajdhani, sans-serif',
-            fontWeight: 400
-          }}>
-            Discover amazing destinations, travel tips, and stories from around the world
-          </Typography>
-        </Box>
+
 
         {/* Search and Filter */}
         <Box sx={{ 
