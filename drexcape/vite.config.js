@@ -21,9 +21,9 @@ export default defineConfig({
     proxy: {
       '/api': {
         // Production Configuration
-        // target: 'http://localhost:5000',
-        // Development Configuration
-        target: 'http://localhost:3001',
+        target: 'http://localhost:5000',
+        // // Development Configuration
+        // target: 'http://localhost:3001',
         changeOrigin: true,
       },
     },
