@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Drexcape - Smart Travel Itinerary Generator
 
 A full-stack web application for generating personalized travel itineraries using AI.
@@ -148,3 +149,7 @@ This project is licensed under the MIT License.
 ---
 
 Made with ❤️ for travelers worldwide
+=======
+# drexcape-deploy
+Deployment version of Drexcape
+>>>>>>> 1c9f897356432fe7357fd35d2f9700087954f96a
