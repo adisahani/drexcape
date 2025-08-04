@@ -36,6 +36,7 @@ import {
   Cancel as CancelIcon,
   Edit as EditIcon
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const PromotionalLeadsSection = () => {
   const [leads, setLeads] = useState([]);
@@ -53,7 +54,7 @@ const PromotionalLeadsSection = () => {
   const fetchLeads = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:3001/api/promotional-leads', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.PROMOTIONAL_LEADS), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -74,7 +75,7 @@ const PromotionalLeadsSection = () => {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:3001/api/promotional-leads/stats', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.PROMOTIONAL_LEADS_STATS), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -97,7 +98,7 @@ const PromotionalLeadsSection = () => {
   const handleUpdateLead = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`http://localhost:3001/api/promotional-leads/${editDialog.lead._id}/status`, {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.PROMOTIONAL_LEADS_STATUS(editDialog.lead._id)), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

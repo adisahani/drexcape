@@ -31,6 +31,7 @@ import {
   Visibility as VisibilityIcon,
   CloudUpload as CloudUploadIcon
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const AdminBlogManager = () => {
   const [blogs, setBlogs] = useState([]);
@@ -59,7 +60,7 @@ const AdminBlogManager = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('/api/blogs/admin/all', {
+      const response = await fetch(buildApiUrl('/api/blogs/admin/all'), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -165,7 +166,7 @@ const AdminBlogManager = () => {
       
       const method = editingBlog ? 'PUT' : 'POST';
       
-      const response = await fetch(url, {
+      const response = await fetch(buildApiUrl(url), {
         method,
         headers: {
           'Authorization': `Bearer ${token}`
@@ -194,7 +195,7 @@ const AdminBlogManager = () => {
 
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(`/api/blogs/${blogId}`, {
+      const response = await fetch(buildApiUrl(`/api/blogs/${blogId}`), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

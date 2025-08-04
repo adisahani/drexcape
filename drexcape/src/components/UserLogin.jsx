@@ -30,6 +30,7 @@ import {
 } from '@mui/icons-material';
 import { setCookie, getCookie, hasUserFilledContactForm, markUserAsContacted, deleteCookie } from '../utils/cookies';
 import { useAuth } from '../contexts/AuthContext';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn = false }) => {
   const { handleUserLogin } = useAuth();
@@ -176,7 +177,7 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
       // Normalize phone number (remove all non-digits)
       const normalizedPhone = loginData.phone.replace(/\D/g, '');
       
-      const response = await fetch('/api/users/login', {
+              const response = await fetch(buildApiUrl(API_ENDPOINTS.USER_LOGIN), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -256,7 +257,7 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
       // Normalize phone number (remove all non-digits)
       const normalizedPhone = registerData.phone.replace(/\D/g, '');
       
-      const response = await fetch('/api/users/register', {
+              const response = await fetch(buildApiUrl(API_ENDPOINTS.USER_REGISTER), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

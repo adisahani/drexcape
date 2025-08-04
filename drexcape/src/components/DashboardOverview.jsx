@@ -27,6 +27,7 @@ import {
   Settings,
   Refresh
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const DashboardOverview = () => {
   const [loading, setLoading] = useState(true);
@@ -43,7 +44,7 @@ const DashboardOverview = () => {
       const token = localStorage.getItem('adminToken');
       
       const response = await fetch(
-        'http://localhost:3001/api/admin/dashboard/ai-usage?period=7d',
+        buildApiUrl('/api/admin/dashboard/ai-usage?period=7d'),
         {
           headers: {
             'Authorization': `Bearer ${token}`,

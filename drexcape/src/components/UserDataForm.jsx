@@ -14,6 +14,7 @@ import {
   Checkbox
 } from '@mui/material';
 import { Person, Phone, Email, Save } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const UserDataForm = ({ open, onClose, onUserDataSubmit, searchData }) => {
   const [formData, setFormData] = useState({
@@ -60,7 +61,7 @@ const UserDataForm = ({ open, onClose, onUserDataSubmit, searchData }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/users/register', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.USER_REGISTER), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

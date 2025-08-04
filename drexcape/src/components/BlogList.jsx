@@ -28,6 +28,7 @@ import {
   ArrowBack as ArrowBackIcon,
   ContentCopy as CopyIcon
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 
 const BlogList = () => {
@@ -48,7 +49,7 @@ const BlogList = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await fetch('/api/blogs/categories/list');
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.BLOG_CATEGORIES));
       const data = await response.json();
       setCategories(data);
     } catch (error) {
@@ -72,7 +73,7 @@ const BlogList = () => {
         params.append('category', selectedCategory);
       }
 
-      const response = await fetch(`/api/blogs/published?${params}`);
+      const response = await fetch(buildApiUrl(`${API_ENDPOINTS.BLOGS_PUBLISHED}?${params}`));
       const data = await response.json();
 
       if (response.ok) {
@@ -158,7 +159,7 @@ const BlogList = () => {
         return;
       }
 
-      await fetch(`/api/blogs/${blogId}/share`, {
+      await fetch(buildApiUrl(API_ENDPOINTS.BLOG_SHARE(blogId)), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

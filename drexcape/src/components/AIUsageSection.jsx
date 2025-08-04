@@ -30,6 +30,7 @@ import {
   CheckCircle,
   Error
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const AIUsageSection = () => {
   const [loading, setLoading] = useState(true);
@@ -51,7 +52,7 @@ const AIUsageSection = () => {
       console.log('🔍 Debug: Fetching from:', `http://localhost:3001/api/admin/dashboard/ai-usage?period=${period}`);
       
       const response = await fetch(
-        `http://localhost:3001/api/admin/dashboard/ai-usage?period=${period}`,
+        buildApiUrl(`/api/admin/dashboard/ai-usage?period=${period}`),
         {
           headers: {
             'Authorization': `Bearer ${token}`,

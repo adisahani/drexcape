@@ -23,6 +23,7 @@ import {
   CheckCircle as CheckCircleIcon
 } from '@mui/icons-material';
 import { setCookie, getCookie, hasUserFilledContactForm, markUserAsContacted, deleteCookie } from '../utils/cookies';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
   console.log('🎭 === PromotionalPopup component MOUNTING ===');
@@ -192,7 +193,7 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
 
     try {
       // Submit to backend API
-      const response = await fetch('/api/promotional-leads/submit', {
+              const response = await fetch(buildApiUrl(API_ENDPOINTS.PROMOTIONAL_LEADS_SUBMIT), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

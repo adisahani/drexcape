@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { LockOutlined } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const AdminLogin = () => {
   const { handleAdminLogin } = useAuth();
@@ -34,7 +35,7 @@ const AdminLogin = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:3001/api/admin/auth/login', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ADMIN_LOGIN), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

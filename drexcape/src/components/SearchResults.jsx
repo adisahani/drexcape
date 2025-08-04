@@ -8,6 +8,7 @@ import UserLogin from './UserLogin';
 import PageWrapper from './PageWrapper';
 import { hasUserFilledContactForm, resetPopupDismissal, getCookie } from '../utils/cookies';
 import { useAuth } from '../contexts/AuthContext';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const SearchResults = () => {
   const location = useLocation();
@@ -229,7 +230,7 @@ const SearchResults = () => {
           return date;
         };
 
-        const response = await fetch('/api/generate-itinerary', {
+        const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_ITINERARY), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -291,7 +292,7 @@ const SearchResults = () => {
     try {
       console.log('Fetching image for:', { place, destination, idx });
       
-      const res = await fetch(`/api/place-image?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}`);
+              const res = await fetch(buildApiUrl(`${API_ENDPOINTS.PLACE_IMAGE}?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}`));
       
       if (!res.ok) {
         console.error('Place image API error:', res.status, res.statusText);
@@ -393,7 +394,7 @@ const SearchResults = () => {
         return date;
       };
 
-      const response = await fetch('/api/generate-itinerary', {
+              const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_ITINERARY), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

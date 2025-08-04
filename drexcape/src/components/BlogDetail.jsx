@@ -25,6 +25,7 @@ import {
   CalendarToday as CalendarIcon,
   ContentCopy as CopyIcon
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 
 const BlogDetail = () => {
@@ -41,7 +42,7 @@ const BlogDetail = () => {
   const fetchBlog = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/blogs/${slug}`);
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.BLOG_DETAIL(slug)));
       const data = await response.json();
 
       if (response.ok) {
@@ -122,7 +123,7 @@ const BlogDetail = () => {
         return;
       }
 
-      await fetch(`/api/blogs/${blog._id}/share`, {
+      await fetch(buildApiUrl(API_ENDPOINTS.BLOG_SHARE(blog._id)), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

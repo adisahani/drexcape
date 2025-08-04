@@ -40,6 +40,7 @@ import {
   Speed,
   Lock
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const AdminSettings = () => {
   const [loading, setLoading] = useState(false);
@@ -76,7 +77,7 @@ const AdminSettings = () => {
   const fetchAdminData = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:3001/api/admin/auth/profile', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ADMIN_PROFILE), {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -119,7 +120,7 @@ const AdminSettings = () => {
   const handleChangePassword = async (currentPassword, newPassword) => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:3001/api/admin/auth/change-password', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ADMIN_CHANGE_PASSWORD), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

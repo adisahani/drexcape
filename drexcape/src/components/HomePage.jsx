@@ -23,6 +23,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -229,7 +230,7 @@ function PopularSearchesSlider() {
     const fetchPopularSearches = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/itineraries/popular/searches');
+        const response = await fetch(buildApiUrl(API_ENDPOINTS.POPULAR_SEARCHES));
         const data = await response.json();
         
         console.log('🎯 Popular searches API response:', data);

@@ -44,6 +44,7 @@ import drexcapeLogo from '../assets/drexcape-logo.png';
 import PromotionalPopup from './PromotionalPopup';
 import UserLogin from './UserLogin';
 import { getCookie, hasUserFilledContactForm } from '../utils/cookies';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 // GooeyCursor component (same as main app)
 function GooeyCursor() {
@@ -166,7 +167,7 @@ const ItineraryDetailPage = () => {
       const destination = itinerary.destinations?.[0] || '';
       
       if (place || destination) {
-        fetch(`/api/place-image?place=${encodeURIComponent(place)}&destination=${encodeURIComponent(destination)}`)
+        fetch(buildApiUrl(`${API_ENDPOINTS.PLACE_IMAGE}?place=${encodeURIComponent(place)}&destination=${encodeURIComponent(destination)}`))
           .then(res => res.json())
           .then(data => {
             if (data.imageUrl) {
@@ -217,7 +218,7 @@ const ItineraryDetailPage = () => {
       
       // If no search state, try to fetch from database
       console.log('No search state, fetching from database');
-      const response = await fetch(`http://localhost:3001/api/itineraries/${slug}`);
+              const response = await fetch(buildApiUrl(API_ENDPOINTS.ITINERARY_DETAILS(slug)));
       console.log('Response status:', response.status);
       
       if (response.ok) {
@@ -243,7 +244,7 @@ const ItineraryDetailPage = () => {
     try {
       console.log('Fetching details for itinerary:', itineraryId);
       setDetailsLoading(true);
-      const response = await fetch(`http://localhost:3001/api/itinerary-details/${itineraryId}`);
+              const response = await fetch(buildApiUrl(API_ENDPOINTS.ITINERARY_DETAILS_BY_ID(itineraryId)));
       
       if (response.ok) {
         const data = await response.json();

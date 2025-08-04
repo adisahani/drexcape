@@ -42,6 +42,7 @@ import {
   LocationOn as LocationIcon,
   DeviceHub as DeviceIcon
 } from '@mui/icons-material';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const ActivityTrackerSection = () => {
   const [activities, setActivities] = useState([]);
@@ -70,7 +71,7 @@ const ActivityTrackerSection = () => {
         device: filters.deviceType
       });
 
-      const response = await fetch(`http://localhost:3001/api/analytics/activity-feed?${queryParams}`, {
+      const response = await fetch(buildApiUrl(`${API_ENDPOINTS.ANALYTICS_ACTIVITY_FEED}?${queryParams}`), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -91,7 +92,7 @@ const ActivityTrackerSection = () => {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:3001/api/analytics/dashboard', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ANALYTICS_DASHBOARD), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -150,7 +151,7 @@ const ActivityTrackerSection = () => {
   const handleExport = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch('http://localhost:3001/api/analytics/export', {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ANALYTICS_EXPORT), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
