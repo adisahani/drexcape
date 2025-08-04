@@ -10,8 +10,10 @@ import {
   Container
 } from '@mui/material';
 import { LockOutlined } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
 
-const AdminLogin = ({ onLoginSuccess }) => {
+const AdminLogin = () => {
+  const { handleAdminLogin } = useAuth();
   const [formData, setFormData] = useState({
     email: 'admin@drexcape.com',
     password: 'admin123'
@@ -43,10 +45,8 @@ const AdminLogin = ({ onLoginSuccess }) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Store token and admin data
-        localStorage.setItem('adminToken', data.token);
-        localStorage.setItem('adminData', JSON.stringify(data.admin));
-        onLoginSuccess(data);
+        // Update authentication context
+        handleAdminLogin(data.admin);
       } else {
         setError(data.error || 'Login failed');
       }

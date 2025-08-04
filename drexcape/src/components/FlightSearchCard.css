@@ -15,6 +15,7 @@
   max-width: 1100px;
   min-height: 80px;
   text-align: left;
+  z-index: 500;
 }
 
 .location-section, .date-section, .travellers-section {
@@ -272,13 +273,93 @@
   color: #fff !important;
 }
 
+/* Date picker styling and positioning */
 .date-range-picker-popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-  padding: 8px 8px 0 8px;
+  padding: 8px;
+  z-index: 9999;
+  min-width: max-content;
+}
+
+/* Done button container */
+.date-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px;
+  border-top: 1px solid #eee;
+  margin-top: 8px;
+}
+
+/* Done button styling */
+.date-picker-done-btn {
+  background: #3fa9f5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 24px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.date-picker-done-btn:hover {
+  background: #2d96e0;
+}
+
+/* Ensure proper stacking context */
+.flight-search-card {
+  position: relative;
+  z-index: 9999 !important;
+}
+
+.date-section {
+  position: relative;
+  z-index: 9999 !important;
+}
+
+/* Force sections below to stay under the date picker */
+.popular-destinations,
+.categories-section,
+.journey-steps,
+.special-offers {
+  position: relative;
+  z-index: 1 !important;
+}
+
+/* Additional fix for date picker components */
+.rdrDateRangePickerWrapper,
+.rdrCalendarWrapper,
+.rdrMonth,
+.rdrDays,
+.rdrDay {
+  z-index: 9999 !important;
+}
+
+/* --- Date Picker Overlap Fix (Minimal, Non-Destructive) --- */
+.flight-search-card {
+  position: relative;
   z-index: 100;
-} 
+}
+
+.date-section {
+  position: relative;
+}
+
+.rdrDateRangePickerWrapper {
+  position: absolute;
+  z-index: 1000;
+}
+
+/* (Optional) Ensure popular destinations is below the card */
+.popular-destinations {
+  position: relative;
+  z-index: 1;
+}
 
 @media (max-width: 700px) {
   .flight-search-card {

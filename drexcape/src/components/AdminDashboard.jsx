@@ -36,10 +36,12 @@ import AdminSettings from './AdminSettings';
 import PromotionalLeadsSection from './PromotionalLeadsSection';
 import AdminBlogManager from './AdminBlogManager';
 import ActivityTrackerSection from './ActivityTrackerSection';
+import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
-const AdminDashboard = ({ onLogout }) => {
+const AdminDashboard = () => {
+  const { handleAdminLogout } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedSection, setSelectedSection] = useState('ai-usage');
   const [adminData, setAdminData] = useState(null);
@@ -65,9 +67,7 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminData');
-    onLogout();
+    handleAdminLogout();
   };
 
   const menuItems = [

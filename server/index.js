@@ -49,6 +49,38 @@ const itineraryRoutes = require('./routes/itineraries');
 const promotionalLeadsRoutes = require('./routes/promotionalLeads');
 const blogRoutes = require('./routes/blogs');
 const analyticsRoutes = require('./routes/analytics');
+const proxy = require('express-http-proxy');
+
+// Simple image proxy endpoint
+app.get('/api/proxy-image', async (req, res) => {
+  try {
+    const imageUrl = req.query.url;
+    if (!imageUrl) {
+      return res.status(400).json({ error: 'No URL provided' });
+    }
+
+    console.log('Proxying image:', imageUrl);
+    
+    const response = await axios.get(imageUrl, {
+      responseType: 'stream',
+      timeout: 10000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+
+    // Set appropriate headers
+    res.setHeader('Content-Type', response.headers['content-type'] || 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
+    
+    // Pipe the image data to the response
+    response.data.pipe(res);
+    
+  } catch (error) {
+    console.error('Image proxy error:', error.message);
+    res.status(500).json({ error: 'Failed to load image' });
+  }
+});
 
 // Debug endpoint for session inspection (development only)
 if (process.env.NODE_ENV === 'development') {
@@ -494,10 +526,25 @@ app.get('/api/place-image', trackAIUsage('place-image'), async (req, res) => {
   let place = req.query.place || '';
   let destination = req.query.destination || '';
   const PIXABAY_API_KEY = process.env.PIXABAY_API_KEY;
+  
+  console.log('Place image request:', { place, destination });
+  console.log('PIXABAY_API_KEY exists:', !!PIXABAY_API_KEY);
+  
+  if (!PIXABAY_API_KEY) {
+    console.error('PIXABAY_API_KEY not found in environment variables');
+    console.log('Using default image URLs instead');
+    // Return a default image URL when API key is not available
+    return res.json({ 
+      imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop'
+    });
+  }
+  
   const tryTerms = [place, destination, 'India travel'];
   try {
     for (let term of tryTerms) {
       if (!term) continue;
+      console.log('Trying term:', term);
+      
       const pixabayRes = await axios.get('https://pixabay.com/api/', {
         params: {
           key: PIXABAY_API_KEY,
@@ -508,17 +555,27 @@ app.get('/api/place-image', trackAIUsage('place-image'), async (req, res) => {
           per_page: 3,
         },
       });
+      
       const hits = pixabayRes.data.hits;
+      console.log('Pixabay response hits:', hits?.length || 0);
+      
       if (hits && hits.length > 0) {
+        console.log('Found image URL:', hits[0].webformatURL);
         return res.json({ imageUrl: hits[0].webformatURL });
       }
     }
-    // If all fail, return null
-    return res.json({ imageUrl: null });
+    // If all fail, return a default image
+    console.log('No images found for any terms, using default');
+    return res.json({ 
+      imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop'
+    });
   } catch (err) {
     console.error('Pixabay error:', err?.response?.data || err);
     console.error('Pixabay error details:', err.message);
-    return res.status(500).json({ error: 'Failed to fetch image from Pixabay.' });
+    console.log('Using default image due to Pixabay error');
+    return res.json({ 
+      imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop'
+    });
   }
 });
 

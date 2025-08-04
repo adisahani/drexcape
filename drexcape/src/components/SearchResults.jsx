@@ -4,9 +4,10 @@ import '../App.css';
 import ReactMarkdown from 'react-markdown';
 import { Typography, Button } from '@mui/material';
 import { Lock as LockIcon } from '@mui/icons-material';
-import PromotionalPopup from './PromotionalPopup';
+import UserLogin from './UserLogin';
 import PageWrapper from './PageWrapper';
 import { hasUserFilledContactForm, resetPopupDismissal, getCookie } from '../utils/cookies';
+import { useAuth } from '../contexts/AuthContext';
 
 const SearchResults = () => {
   const location = useLocation();
@@ -32,6 +33,18 @@ const SearchResults = () => {
         travelClass: state.travelClass || 'Economy',
         startDate: getDateValue(state.startDate || state.departureDate),
         endDate: getDateValue(state.endDate || state.returnDate)
+      };
+    }
+    
+    // Check for restored state from back navigation
+    if (state.fromSaved && state.searchParams) {
+      return {
+        from: state.searchParams.from || '',
+        to: state.searchParams.to || '',
+        travellers: state.searchParams.travellers || 1,
+        travelClass: state.searchParams.travelClass || 'Economy',
+        startDate: getDateValue(state.searchParams.startDate || state.searchParams.departureDate),
+        endDate: getDateValue(state.searchParams.endDate || state.searchParams.returnDate)
       };
     }
     
@@ -85,15 +98,108 @@ const SearchResults = () => {
   const [retryDelay, setRetryDelay] = useState(2000);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [pendingItinerary, setPendingItinerary] = useState(null);
-  const [showContactForm, setShowContactForm] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(false);
+  const [userHasAccess, setUserHasAccess] = useState(false);
+  
+  // Get authentication state from context
+  const { isUserLoggedIn, handleUserLogin } = useAuth();
 
-  // Clean up localStorage after getting parameters
+  // Store search parameters for back navigation
   useEffect(() => {
-    const storedParams = localStorage.getItem('drexcape_search_params');
+    const searchParams = {
+      from,
+      to,
+      travellers,
+      travelClass,
+      startDate,
+      endDate
+    };
+    
+    // Store current search parameters for back navigation
+    localStorage.setItem('drexcape_search_params', JSON.stringify(searchParams));
+    
+    // Clean up old stored params only if they're different
+    const storedParams = localStorage.getItem('drexcape_search_params_backup');
     if (storedParams) {
-      localStorage.removeItem('drexcape_search_params');
+      try {
+        const parsed = JSON.parse(storedParams);
+        if (JSON.stringify(parsed) !== JSON.stringify(searchParams)) {
+          localStorage.removeItem('drexcape_search_params_backup');
+        }
+      } catch (error) {
+        localStorage.removeItem('drexcape_search_params_backup');
+      }
     }
+  }, [from, to, travellers, travelClass, startDate, endDate]);
+
+  // Check user access status
+  useEffect(() => {
+    const checkUserAccess = async () => {
+      try {
+        const hasAccess = await hasUserFilledContactForm();
+        setUserHasAccess(hasAccess);
+      } catch (error) {
+        console.error('Error checking user access:', error);
+        setUserHasAccess(false);
+      }
+    };
+    
+    checkUserAccess();
   }, []);
+
+  // Restore search results from localStorage or state if available
+  useEffect(() => {
+    // First check if we have restored results from state
+    if (state.fromSaved && state.searchResults && !loading) {
+      try {
+        const results = state.searchResults;
+        if (Array.isArray(results) && results.length > 0) {
+          console.log('Restoring search results from state:', results.length, 'itineraries');
+          setAiItineraries(results);
+          setLoading(false);
+          setError('');
+          
+          // Fetch images for restored results
+          results.forEach((itinerary, idx) => {
+            if (itinerary.placesToVisit && itinerary.placesToVisit.length > 0) {
+              fetchImage(itinerary.placesToVisit[0], itinerary.destinations?.[0], idx);
+            } else if (itinerary.destinations && itinerary.destinations.length > 0) {
+              fetchImage(null, itinerary.destinations[0], idx);
+            }
+          });
+          return; // Don't check localStorage if we have state data
+        }
+      } catch (error) {
+        console.error('Error restoring search results from state:', error);
+      }
+    }
+    
+    // Fallback to localStorage if no state data
+    const storedResults = localStorage.getItem('drexcape_search_results');
+    if (storedResults && !loading) {
+      try {
+        const results = JSON.parse(storedResults);
+        if (Array.isArray(results) && results.length > 0) {
+          console.log('Restoring search results from localStorage:', results.length, 'itineraries');
+          setAiItineraries(results);
+          setLoading(false);
+          setError('');
+          
+          // Fetch images for restored results
+          results.forEach((itinerary, idx) => {
+            if (itinerary.placesToVisit && itinerary.placesToVisit.length > 0) {
+              fetchImage(itinerary.placesToVisit[0], itinerary.destinations?.[0], idx);
+            } else if (itinerary.destinations && itinerary.destinations.length > 0) {
+              fetchImage(null, itinerary.destinations[0], idx);
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Error restoring search results from localStorage:', error);
+        localStorage.removeItem('drexcape_search_results');
+      }
+    }
+  }, [loading, state.fromSaved, state.searchResults]);
 
   // Generate itineraries when parameters change
   useEffect(() => {
@@ -162,6 +268,9 @@ const SearchResults = () => {
         if (data.itineraries && Array.isArray(data.itineraries)) {
           setAiItineraries(data.itineraries);
           setError('');
+          
+          // Store search results for back navigation
+          localStorage.setItem('drexcape_search_results', JSON.stringify(data.itineraries));
         } else {
           setError('No itineraries generated. Please try again.');
         }
@@ -180,14 +289,28 @@ const SearchResults = () => {
   const fetchImage = async (place, destination, idx) => {
     if (!place && !destination) return;
     try {
+      console.log('Fetching image for:', { place, destination, idx });
+      
       const res = await fetch(`/api/place-image?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}`);
+      
       if (!res.ok) {
+        console.error('Place image API error:', res.status, res.statusText);
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
+      
       const data = await res.json();
-      const imageUrl = data.imageUrl ? `/api/proxy-image?url=${encodeURIComponent(data.imageUrl)}` : '/default-travel.jpg';
-      setImageUrls(prev => ({ ...prev, [idx]: imageUrl }));
+      console.log('Place image API response:', data);
+      
+      if (data.imageUrl) {
+        const imageUrl = `/api/proxy-image?url=${encodeURIComponent(data.imageUrl)}`;
+        console.log('Setting image URL:', imageUrl);
+        setImageUrls(prev => ({ ...prev, [idx]: imageUrl }));
+      } else {
+        console.log('No image URL returned, using default');
+        setImageUrls(prev => ({ ...prev, [idx]: '/default-travel.jpg' }));
+      }
     } catch (error) {
+      console.error('Image fetch error:', error);
       setImageUrls(prev => ({ ...prev, [idx]: '/default-travel.jpg' }));
     }
   };
@@ -205,18 +328,17 @@ const SearchResults = () => {
 
   const handleViewDetails = async (itinerary, index) => {
     try {
-      // Check if user has filled contact form
-      const hasAccess = await hasUserFilledContactForm();
+      // Check if user is logged in
+      const userToken = getCookie('drexcape_user_token');
       
-      if (!hasAccess) {
-        console.log('🔒 User has NOT filled contact form - showing popup');
-        resetPopupDismissal();
+      if (!userToken) {
+        console.log('🔒 User is NOT logged in - showing login form');
         setPendingItinerary({ itinerary, index });
-        setShowContactForm(true);
+        setShowLoginForm(true);
         return;
       }
 
-      console.log('✅ User has filled contact form - navigating to details');
+      console.log('✅ User is logged in - navigating to details');
       if (itinerary.slug) {
         const stateData = {
           from,
@@ -235,10 +357,9 @@ const SearchResults = () => {
         });
       }
     } catch (error) {
-      console.error('Error checking user access:', error);
-      resetPopupDismissal();
+      console.error('Error checking user login status:', error);
       setPendingItinerary({ itinerary, index });
-      setShowContactForm(true);
+      setShowLoginForm(true);
     }
   };
 
@@ -311,16 +432,22 @@ const SearchResults = () => {
     }
   };
 
-  // Handle contact form submission and proceed with itinerary
-  const handleContactFormSubmitted = () => {
-    console.log('🎉 === handleContactFormSubmitted called ===');
+  // Handle login success and proceed with itinerary
+  const handleLoginSuccess = (userData) => {
+    console.log('🎉 === handleLoginSuccess called ===');
     console.log('📋 pendingItinerary:', pendingItinerary);
+    
+    // Update user login status using context
+    handleUserLogin(userData);
+    setUserHasAccess(true);
+    
+    // Close the login form
+    setShowLoginForm(false);
     
     if (pendingItinerary) {
       const { itinerary, index } = pendingItinerary;
-      console.log('✅ Processing pending itinerary:', { itinerary, index });
+      console.log('✅ Processing pending itinerary after login:', { itinerary, index });
       setPendingItinerary(null);
-      setShowContactForm(false);
       
       if (itinerary.slug) {
         const stateData = {
@@ -385,7 +512,7 @@ const SearchResults = () => {
   return (
     <PageWrapper className="fade-in">
       {/* Search Summary */}
-      <div className="card mb-4">
+      <div className="search-summary-card">
         <div className="d-flex justify-between align-center">
           <div>
             <h2 className="section-title text-left">Search Results</h2>
@@ -404,41 +531,56 @@ const SearchResults = () => {
       </div>
 
       {/* Itineraries Grid */}
-      <div className="d-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
+      <div className="search-results-grid">
         {aiItineraries.map((itinerary, index) => (
-          <div key={index} className="card glass-hover">
-            <div className="d-flex align-center mb-3">
-              <img 
-                src={imageUrls[index] || '/default-travel.jpg'} 
-                alt={itinerary.packageName}
-                className="rounded-lg"
-                style={{ width: '80px', height: '60px', objectFit: 'cover' }}
-              />
-              <div className="ml-3">
-                <h3 className="mb-1">{itinerary.packageName}</h3>
-                <p className="text-sm opacity-75">{itinerary.days} Days</p>
+          <div key={index} className="result-card">
+            <img 
+              src={imageUrls[index] || '/default-travel.jpg'} 
+              alt={itinerary.packageName}
+              className="result-card-image"
+              onError={(e) => {
+                console.log('Image failed to load:', e.target.src);
+                e.target.src = '/default-travel.jpg';
+              }}
+            />
+            <div className="result-card-content">
+              <div className="result-card-header">
+                <h3 className="result-card-title">{itinerary.packageName}</h3>
+                <span className="result-card-days">{itinerary.days} Days</span>
               </div>
-            </div>
-            
-            <div className="mb-3">
-              <p className="mb-2"><strong>Destinations:</strong> {itinerary.destinations?.join(', ')}</p>
-              <p className="mb-2"><strong>Price:</strong> ₹{itinerary.price?.toLocaleString()}</p>
-              <div className="mb-2">
-                <strong>Highlights:</strong>
-                <ul className="mt-1">
-                  {itinerary.highlights?.slice(0, 3).map((highlight, idx) => (
-                    <li key={idx} className="text-sm opacity-75">• {highlight}</li>
-                  ))}
-                </ul>
+              
+              <div className="result-card-details">
+                <p><strong>Destinations:</strong> {itinerary.destinations?.join(', ')}</p>
+                <p><strong>Price:</strong> ₹{itinerary.price?.toLocaleString()}</p>
+                <div>
+                  <strong>Highlights:</strong>
+                  <ul>
+                    {itinerary.highlights?.slice(0, 3).map((highlight, idx) => (
+                      <li key={idx}>{highlight}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
+              
+              <button 
+                className={`w-full ${isUserLoggedIn ? 'btn-primary' : 'btn-locked'}`}
+                onClick={() => handleViewDetails(itinerary, index)}
+              >
+                {isUserLoggedIn ? (
+                  'View Details'
+                ) : (
+                  <>
+                    <LockIcon style={{ fontSize: '1rem', marginRight: '0.5rem' }} />
+                    Login to View
+                  </>
+                )}
+              </button>
+              {!isUserLoggedIn && (
+                <p className="unlock-hint">
+                  Login to unlock detailed itineraries
+                </p>
+              )}
             </div>
-            
-            <button 
-              className="btn-primary w-full"
-              onClick={() => handleViewDetails(itinerary, index)}
-            >
-              View Details
-            </button>
           </div>
         ))}
       </div>
@@ -456,12 +598,13 @@ const SearchResults = () => {
         </div>
       )}
 
-      {/* Contact Form Popup */}
-      {showContactForm && (
-        <PromotionalPopup
-          onClose={() => setShowContactForm(false)}
-          onSubmit={handleContactFormSubmitted}
-          isOpen={showContactForm}
+      {/* Login Form Popup */}
+      {showLoginForm && (
+        <UserLogin
+          onLoginSuccess={handleLoginSuccess}
+          onClose={() => setShowLoginForm(false)}
+          forceOpen={true}
+          isUserLoggedIn={isUserLoggedIn}
         />
       )}
     </PageWrapper>

@@ -129,8 +129,8 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
         </div>
       </div>
       {/* Date Range Picker */}
-      <div className="date-section" style={{ position: 'relative' }}>
-        <div className="date-display-row" style={{ display: 'flex', gap: '16px' }}>
+      <div className="date-section" style={{ position: 'relative', zIndex: 99999 }}>
+        <div className="date-display-row" style={{ display: 'flex', gap: '16px', position: 'relative', zIndex: 99999 }}>
           <div className="date-display" onClick={() => setShowCalendar(true)} style={{ cursor: 'pointer' }}>
             <div style={{ fontSize: '0.95rem', color: '#888' }}>Departure</div>
             <div style={{ fontWeight: 700, fontSize: '1.3rem' }}>{formatDate(range[0].startDate)}</div>
@@ -143,10 +143,11 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
           </div>
         </div>
         {showCalendar && (
-          <div style={{ position: 'absolute', top: '110%', left: 0, zIndex: 20 }}>
-            <DateRangePicker range={range} setRange={setRange} />
-            <button style={{ marginTop: 8, padding: '6px 18px', borderRadius: 8, border: 'none', background: '#3fa9f5', color: '#fff', cursor: 'pointer' }} onClick={() => setShowCalendar(false)}>Done</button>
-          </div>
+          <DateRangePicker 
+            range={range} 
+            setRange={setRange} 
+            onClose={() => setShowCalendar(false)}
+          />
         )}
       </div>
       {/* Travellers & Class Selector */}

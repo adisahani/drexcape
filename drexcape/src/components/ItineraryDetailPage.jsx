@@ -298,7 +298,7 @@ const ItineraryDetailPage = () => {
       try {
         const parsedResults = JSON.parse(savedResults);
         const parsedParams = JSON.parse(savedParams);
-        console.log('Back to Search - Parsed results:', parsedResults.itineraries?.length || 0, 'itineraries');
+        console.log('Back to Search - Parsed results:', parsedResults.length || 0, 'itineraries');
         console.log('Back to Search - Parsed params:', parsedParams);
         
         // Navigate to search results with saved state

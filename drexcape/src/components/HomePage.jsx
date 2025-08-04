@@ -22,6 +22,7 @@ import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -431,13 +432,16 @@ function PopularSearchesSlider() {
   );
 }
 
-const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
+const HomePage = () => {
+  const { isUserLoggedIn } = useAuth();
   // Refs for sections
   const heroRef = useRef(null)
   const destinationsRef = useRef(null)
   const categoriesRef = useRef(null)
   const stepsRef = useRef(null)
   const offersRef = useRef(null)
+
+
 
   // Function to handle search with user data
   const handleSearchWithUserData = (searchParams) => {
@@ -453,86 +457,94 @@ const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
   };
 
   useEffect(() => {
-    // GSAP animations for sections
-    gsap.utils.toArray('.gsap-fade-in').forEach((element, index) => {
-      gsap.fromTo(element, 
-        { opacity: 0, y: 50 },
-        { 
-          opacity: 1, 
-          y: 0, 
-          duration: 0.8, 
-          delay: index * 0.2,
-          ease: 'power2.out',
-          scrollTrigger: {
-            trigger: element,
-            start: 'top 80%',
-            end: 'bottom 20%',
-            toggleActions: 'play none none reverse'
+    try {
+      // GSAP animations for sections
+      gsap.utils.toArray('.gsap-fade-in').forEach((element, index) => {
+        gsap.fromTo(element, 
+          { opacity: 0, y: 50 },
+          { 
+            opacity: 1, 
+            y: 0, 
+            duration: 0.8, 
+            delay: index * 0.2,
+            ease: 'power2.out',
+            scrollTrigger: {
+              trigger: element,
+              start: 'top 80%',
+              end: 'bottom 20%',
+              toggleActions: 'play none none reverse'
+            }
           }
+        );
+      });
+
+      // Parallax effect for hero title
+      gsap.to('.hero-title', {
+        yPercent: -20,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: '.hero',
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true
         }
-      );
-    });
+      });
 
-    // Parallax effect for hero title
-    gsap.to('.hero-title', {
-      yPercent: -20,
-      ease: 'none',
-      scrollTrigger: {
-        trigger: '.hero',
-        start: 'top bottom',
-        end: 'bottom top',
-        scrub: true
-      }
-    });
-
-    // Cleanup function
-    return () => {
-      ScrollTrigger.getAll().forEach(trigger => trigger.kill());
-    };
-  }, []);
+      // Cleanup function
+      return () => {
+        ScrollTrigger.getAll().forEach(trigger => trigger.kill());
+      };
+    } catch (error) {
+      console.error('GSAP animation error:', error);
+    }
+  }, [isUserLoggedIn]);
 
   // GSAP Animations
   useEffect(() => {
-    if (heroRef.current) {
-      gsap.fromTo(
-        heroRef.current.querySelectorAll('.gsap-fade-in'),
-        { opacity: 0, y: 40 },
-        { opacity: 1, y: 0, stagger: 0.15, duration: 1, ease: 'power3.out', delay: 0.2 }
-      )
-    }
-    const sections = [destinationsRef, categoriesRef, stepsRef, offersRef]
-    sections.forEach(ref => {
-      if (ref.current) {
+    try {
+      if (heroRef.current) {
         gsap.fromTo(
-          ref.current.querySelectorAll('.gsap-fade-in'),
+          heroRef.current.querySelectorAll('.gsap-fade-in'),
           { opacity: 0, y: 40 },
-          {
-            opacity: 1, y: 0, stagger: 0.15, duration: 1, ease: 'power3.out',
-            scrollTrigger: {
-              trigger: ref.current,
-              start: "top 80%",
-              toggleActions: "play none none none",
-            }
-          }
+          { opacity: 1, y: 0, stagger: 0.15, duration: 1, ease: 'power3.out', delay: 0.2 }
         )
       }
-    })
-    const cardSelectors = [
-      '.destination-card',
-      '.category-card',
-      '.step-card',
-    ]
-    cardSelectors.forEach(selector => {
-      document.querySelectorAll(selector).forEach(card => {
-        card.addEventListener('mouseenter', () => {
-          gsap.to(card, { scale: 1.03, boxShadow: '0 0 32px #a084e888', duration: 0.35, ease: 'power2.out' })
-        })
-        card.addEventListener('mouseleave', () => {
-          gsap.to(card, { scale: 1, boxShadow: '0 8px 32px 0 #a084e822', duration: 0.35, ease: 'power2.inOut' })
+      const sections = [destinationsRef, categoriesRef, stepsRef, offersRef]
+      sections.forEach(ref => {
+        if (ref.current) {
+          gsap.fromTo(
+            ref.current.querySelectorAll('.gsap-fade-in'),
+            { opacity: 0, y: 40 },
+            {
+              opacity: 1, y: 0, stagger: 0.15, duration: 1, ease: 'power3.out',
+              scrollTrigger: {
+                trigger: ref.current,
+                start: "top 80%",
+                toggleActions: "play none none none",
+              }
+            }
+          )
+        }
+      })
+      const cardSelectors = [
+        '.destination-card',
+        '.category-card',
+        '.step-card',
+      ]
+      cardSelectors.forEach(selector => {
+        document.querySelectorAll(selector).forEach(card => {
+          card.addEventListener('mouseenter', () => {
+            gsap.to(card, { scale: 1.03, boxShadow: '0 0 32px #a084e888', duration: 0.35, ease: 'power2.out' })
+          })
+          card.addEventListener('mouseleave', () => {
+            gsap.to(card, { scale: 1, boxShadow: '0 8px 32px 0 #a084e822', duration: 0.35, ease: 'power2.inOut' })
+          })
         })
       })
-    })
-  }, [])
+    } catch (error) {
+      console.error('GSAP animation error:', error);
+    }
+  }, []);
 
   return (
     <>
@@ -549,7 +561,7 @@ const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
             AI-powered journeys, personalized for you.
           </p>
           {!isUserLoggedIn && (
-            <button className="hero-cta-btn gsap-fade-in" onClick={onShowUserLogin}>
+            <button className="hero-cta-btn gsap-fade-in" onClick={() => console.log('Login button clicked')}>
               Plan My Escape <ArrowForwardIosIcon style={{fontSize: '1.1em', marginLeft: '0.5em'}} />
             </button>
           )}
@@ -600,7 +612,7 @@ const HomePage = ({ isUserLoggedIn, onShowUserLogin }) => {
             <h3>20% OFF</h3>
             <p>On all bookings till 28 September, 2023</p>
             {!isUserLoggedIn && (
-              <button className="cta-primary" onClick={onShowUserLogin}>Book Now</button>
+              <button className="cta-primary" onClick={() => console.log('Book Now clicked')}>Book Now</button>
             )}
           </div>
         </div>

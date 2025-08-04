@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import gsap from 'gsap';
+import { useAuth } from '../contexts/AuthContext';
 
 // Unified Background Component
 const UnifiedBackground = () => {
@@ -204,6 +205,8 @@ const SpotlightEffect = () => {
 };
 
 const Layout = () => {
+  const { isUserLoggedIn, userData, handleUserLogout } = useAuth();
+
   return (
     <div className="app">
       {/* Unified Background System */}
@@ -213,7 +216,11 @@ const Layout = () => {
       <SpotlightEffect />
       
       {/* Header */}
-      <Header />
+      <Header 
+        isUserLoggedIn={isUserLoggedIn}
+        userData={userData}
+        onUserLogout={handleUserLogout}
+      />
       
       {/* Main Content */}
       <main className="page-container">

@@ -59,23 +59,34 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { phone, password } = req.body;
+    
+    console.log('🔐 Server login attempt:', { phone, passwordLength: password?.length });
 
     // Find user by phone
     const user = await User.findOne({ phone });
+    console.log('👤 User found:', user ? 'Yes' : 'No');
+    
     if (!user) {
+      console.log('❌ User not found for phone:', phone);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
+    console.log('🔑 Password valid:', isPasswordValid);
+    
     if (!isPasswordValid) {
+      console.log('❌ Invalid password for user:', phone);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // Check if user is active
     if (!user.isActive) {
+      console.log('❌ User account deactivated:', phone);
       return res.status(401).json({ error: 'Account is deactivated' });
     }
+
+    console.log('✅ Login successful for user:', phone);
 
     // Generate JWT token
     const token = jwt.sign(

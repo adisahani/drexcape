@@ -28,8 +28,11 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon
 } from '@mui/icons-material';
+import { setCookie, getCookie, hasUserFilledContactForm, markUserAsContacted, deleteCookie } from '../utils/cookies';
+import { useAuth } from '../contexts/AuthContext';
 
 const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn = false }) => {
+  const { handleUserLogin } = useAuth();
   const [open, setOpen] = useState(forceOpen && !isUserLoggedIn);
   const [activeTab, setActiveTab] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -89,9 +92,19 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
   const handleToggleConfirmPassword = () => setShowConfirmPassword(!showConfirmPassword);
 
   const validatePhone = (phone) => {
+    console.log('📱 Validating phone:', phone);
     const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length < 10) return 'Phone number must be at least 10 digits';
-    if (cleaned.length > 15) return 'Phone number cannot exceed 15 digits';
+    console.log('📱 Cleaned phone:', cleaned);
+    
+    if (cleaned.length < 10) {
+      console.log('❌ Phone too short:', cleaned.length);
+      return 'Phone number must be at least 10 digits';
+    }
+    if (cleaned.length > 15) {
+      console.log('❌ Phone too long:', cleaned.length);
+      return 'Phone number cannot exceed 15 digits';
+    }
+    console.log('✅ Phone validation passed');
     return null;
   };
 
@@ -136,39 +149,56 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
     setError('');
     setLoading(true);
 
+    console.log('🔐 Login attempt with:', { phone: loginData.phone, passwordLength: loginData.password.length });
+
     // Validate login form
     const errors = {};
     const phoneError = validatePhone(loginData.phone);
-    if (phoneError) errors.phone = phoneError;
-    if (!loginData.password) errors.password = 'Password is required';
+    if (phoneError) {
+      console.log('❌ Phone validation error:', phoneError);
+      errors.phone = phoneError;
+    }
+    if (!loginData.password) {
+      console.log('❌ Password validation error: Password is required');
+      errors.password = 'Password is required';
+    }
 
     if (Object.keys(errors).length > 0) {
+      console.log('❌ Validation errors:', errors);
       setLoginErrors(errors);
       setLoading(false);
       return;
     }
 
+    console.log('✅ Validation passed, making API call...');
+
     try {
+      // Normalize phone number (remove all non-digits)
+      const normalizedPhone = loginData.phone.replace(/\D/g, '');
+      
       const response = await fetch('/api/users/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone: loginData.phone,
+          phone: normalizedPhone,
           password: loginData.password
         })
       });
 
+      console.log('📡 Response status:', response.status);
       const data = await response.json();
+      console.log('📡 Response data:', data);
 
       if (!response.ok) {
+        console.log('❌ Login failed:', data.error);
         throw new Error(data.error || 'Login failed');
       }
 
-      // Save token and user data
-      localStorage.setItem('userToken', data.token);
-      localStorage.setItem('userData', JSON.stringify(data.user));
+      console.log('✅ Login successful, updating auth context...');
+      // Update authentication context
+      handleUserLogin(data.user);
       
       setSuccess('Login successful!');
       setTimeout(() => {
@@ -176,6 +206,7 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
         if (onLoginSuccess) onLoginSuccess(data.user);
       }, 1500);
     } catch (error) {
+      console.log('❌ Login error:', error.message);
       setError(error.message);
     } finally {
       setLoading(false);
@@ -186,6 +217,13 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    console.log('📝 Registration attempt with:', { 
+      name: registerData.name, 
+      phone: registerData.phone, 
+      email: registerData.email,
+      passwordLength: registerData.password.length 
+    });
 
     // Validate register form
     const errors = {};
@@ -206,12 +244,18 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
     }
 
     if (Object.keys(errors).length > 0) {
+      console.log('❌ Registration validation errors:', errors);
       setRegisterErrors(errors);
       setLoading(false);
       return;
     }
 
+    console.log('✅ Registration validation passed, making API call...');
+
     try {
+      // Normalize phone number (remove all non-digits)
+      const normalizedPhone = registerData.phone.replace(/\D/g, '');
+      
       const response = await fetch('/api/users/register', {
         method: 'POST',
         headers: {
@@ -219,21 +263,24 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
         },
         body: JSON.stringify({
           name: registerData.name,
-          phone: registerData.phone,
+          phone: normalizedPhone,
           email: registerData.email,
           password: registerData.password
         })
       });
 
+      console.log('📡 Registration response status:', response.status);
       const data = await response.json();
+      console.log('📡 Registration response data:', data);
 
       if (!response.ok) {
+        console.log('❌ Registration failed:', data.error);
         throw new Error(data.error || 'Registration failed');
       }
 
-      // Save token and user data
-      localStorage.setItem('userToken', data.token);
-      localStorage.setItem('userData', JSON.stringify(data.user));
+      console.log('✅ Registration successful, updating auth context...');
+      // Update authentication context
+      handleUserLogin(data.user);
       
       setSuccess('Registration successful!');
       setTimeout(() => {
