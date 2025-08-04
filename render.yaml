@@ -13,7 +13,7 @@ services:
   - type: web
     name: drexcape-frontend
     env: static
-    buildCommand: cd drexcape && npm cache clean --force && npm install --legacy-peer-deps && npm run build
+    buildCommand: cd drexcape && npm cache clean --force && npm install --legacy-peer-deps && npm run build && cp public/_redirects dist/ && cp public/_headers dist/ && cp public/404.html dist/
     staticPublishPath: dist
     envVars:
       - key: NODE_ENV
