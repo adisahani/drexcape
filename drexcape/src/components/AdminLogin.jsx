@@ -47,7 +47,7 @@ const AdminLogin = () => {
 
       if (response.ok) {
         // Update authentication context
-        handleAdminLogin(data.admin);
+        handleAdminLogin(data.admin, data.token);
       } else {
         setError(data.error || 'Login failed');
       }

@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, phone: user.phone },
-      process.env.JWT_SECRET || 'fallback-secret',
+      process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024',
       { expiresIn: '7d' }
     );
 
@@ -91,7 +91,7 @@ router.post('/login', async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { userId: user._id, phone: user.phone },
-      process.env.JWT_SECRET || 'fallback-secret',
+      process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024',
       { expiresIn: '7d' }
     );
 
@@ -128,7 +128,7 @@ router.get('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {
@@ -151,7 +151,7 @@ router.put('/profile', async (req, res) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
     const user = await User.findById(decoded.userId);
     
     if (!user) {
@@ -193,7 +193,7 @@ router.get('/search-history', async (req, res) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
     const user = await User.findById(decoded.userId);
     
     if (!user) {
@@ -216,7 +216,7 @@ router.get('/viewed-itineraries', async (req, res) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
     const user = await User.findById(decoded.userId);
     
     if (!user) {

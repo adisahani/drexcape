@@ -12,7 +12,7 @@ const auth = async (req, res, next) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
     console.log('🔍 Auth Debug: Token decoded successfully:', !!decoded);
     
     const admin = await Admin.findById(decoded.id).select('-password');

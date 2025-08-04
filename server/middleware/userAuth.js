@@ -9,7 +9,7 @@ const userAuth = async (req, res, next) => {
       return res.status(401).json({ error: 'Access denied. No token provided.' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user || !user.isActive) {

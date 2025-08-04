@@ -43,7 +43,7 @@ router.post('/login', async (req, res) => {
 
     // Generate JWT token
     console.log('🔍 Login Debug: JWT_SECRET exists:', !!process.env.JWT_SECRET);
-    const jwtSecret = process.env.JWT_SECRET || 'fallback-secret';
+    const jwtSecret = process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024';
     const token = jwt.sign(
       { id: admin._id, role: admin.role },
       jwtSecret,

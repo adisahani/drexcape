@@ -63,10 +63,10 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('userData');
   };
 
-  const handleAdminLogin = (adminData) => {
+  const handleAdminLogin = (adminData, token) => {
     setIsAdminLoggedIn(true);
     setAdminData(adminData);
-    localStorage.setItem('adminToken', 'logged-in');
+    localStorage.setItem('adminToken', token);
     localStorage.setItem('adminData', JSON.stringify(adminData));
   };
 

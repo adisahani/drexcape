@@ -51,7 +51,7 @@ const getUserFromToken = async (req) => {
     if (!token) return null;
     
     const jwt = require('jsonwebtoken');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
     const user = await User.findById(decoded.userId);
     return user;
   } catch (error) {
