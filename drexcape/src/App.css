@@ -2610,3 +2610,146 @@ body {
     transform: none !important;
   }
 }
+
+/* ===== ENHANCED ITINERARY CARD STYLES ===== */
+
+.enhanced-itinerary-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.result-card-image-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+}
+
+.result-card-image.clickable {
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.result-card-image.clickable:hover {
+  transform: scale(1.05);
+}
+
+.image-indicators {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.image-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.image-indicator.active {
+  background: #fff;
+  transform: scale(1.2);
+}
+
+.image-indicator:hover {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.image-type-label {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  z-index: 2;
+}
+
+.image-browse-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  z-index: 2;
+  opacity: 0.8;
+}
+
+/* Enhanced card hover effects */
+.enhanced-itinerary-card:hover .result-card-image-container {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.enhanced-itinerary-card:hover .image-browse-hint {
+  opacity: 1;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .image-indicators {
+    bottom: 8px;
+    gap: 4px;
+  }
+  
+  .image-indicator {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .image-type-label,
+  .image-browse-hint {
+    font-size: 0.7rem;
+    padding: 3px 6px;
+  }
+  
+  .image-type-label {
+    top: 8px;
+    right: 8px;
+  }
+  
+  .image-browse-hint {
+    bottom: 8px;
+    left: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .image-indicators {
+    bottom: 6px;
+    gap: 3px;
+  }
+  
+  .image-indicator {
+    width: 5px;
+    height: 5px;
+  }
+  
+  .image-type-label,
+  .image-browse-hint {
+    font-size: 0.65rem;
+    padding: 2px 4px;
+  }
+  
+  .image-type-label {
+    top: 6px;
+    right: 6px;
+  }
+  
+  .image-browse-hint {
+    bottom: 6px;
+    left: 6px;
+  }
+}

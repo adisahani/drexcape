@@ -10,10 +10,19 @@
     "dev": "concurrently \"cd server && npm run dev\" \"cd drexcape && npm run dev\"",
     "deploy": "npm run build && npm run start"
   },
-  "keywords": ["travel", "itinerary", "react", "nodejs", "mongodb"],
+  "keywords": [
+    "travel",
+    "itinerary",
+    "react",
+    "nodejs",
+    "mongodb"
+  ],
   "author": "Adi Sahani",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "axios": "^1.11.0"
   }
 }

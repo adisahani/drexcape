@@ -76,8 +76,15 @@ const itinerarySchema = new mongoose.Schema({
   metaTitle: String,
   metaDescription: String,
   
-  // Header image from Pixabay
+  // Enhanced image fields
   headerImage: {
+    type: String,
+    default: '/default-travel.jpg'
+  },
+  galleryImages: [{
+    type: String
+  }],
+  accommodationImage: {
     type: String,
     default: '/default-travel.jpg'
   },

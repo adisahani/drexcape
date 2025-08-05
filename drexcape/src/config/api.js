@@ -54,4 +54,5 @@ export const API_ENDPOINTS = {
   
   // Place images
   PLACE_IMAGE: '/api/place-image',
+  DESTINATION_GALLERY: '/api/destination-gallery',
 }; 
