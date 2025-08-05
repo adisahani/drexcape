@@ -217,7 +217,14 @@ const BlogDetail = () => {
     }}>
 
       
-      <Box sx={{ maxWidth: 800, margin: '0 auto', padding: 3, pt: 12 }}>
+      <Box sx={{ 
+        maxWidth: 800, 
+        margin: '0 auto', 
+        padding: { xs: 2, sm: 3 }, 
+        pt: { xs: 10, sm: 12 },
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
         {/* Back Button */}
         <Button
           variant="outlined"
@@ -264,9 +271,16 @@ const BlogDetail = () => {
             }}
           />
           
-          <Box sx={{ p: 3, pt: 2 }}>
+          <Box sx={{ p: { xs: 2, sm: 3 }, pt: 2 }}>
             {/* Category and Meta */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2, flexWrap: 'wrap' }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: { xs: 1, sm: 2 }, 
+              mb: 2, 
+              flexWrap: 'wrap',
+              justifyContent: { xs: 'center', sm: 'flex-start' }
+            }}>
               <Chip 
                 label={blog.category} 
                 sx={{ 
@@ -342,8 +356,9 @@ const BlogDetail = () => {
           background: 'rgba(255, 255, 255, 0.95)',
           backdropFilter: 'blur(10px)',
           borderRadius: 2,
-          p: 3,
-          border: '1px solid rgba(160, 132, 232, 0.3)'
+          p: { xs: 2, sm: 3 },
+          border: '1px solid rgba(160, 132, 232, 0.3)',
+          textAlign: { xs: 'center', sm: 'left' }
         }}>
           <Typography 
             variant="body1" 

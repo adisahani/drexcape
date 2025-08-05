@@ -1,13 +1,31 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import drexcapeLogo from '../assets/drexcape-logo.png';
 import UserProfile from './UserProfile';
 import UserLogin from './UserLogin';
-import { Avatar, IconButton, Menu, MenuItem, Typography, Box } from '@mui/material';
-import { Person as PersonIcon, AccountCircle as AccountCircleIcon } from '@mui/icons-material';
+import { Avatar, IconButton, Menu, MenuItem, Typography, Box, Drawer, List, ListItem, ListItemText, Divider } from '@mui/material';
+import { Person as PersonIcon, AccountCircle as AccountCircleIcon, Menu as MenuIcon, Close as CloseIcon, Home as HomeIcon, Explore as ExploreIcon, Category as CategoryIcon, LocalOffer as OfferIcon, Article as BlogIcon, ContactSupport as ContactIcon } from '@mui/icons-material';
 
 const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [showLoginForm, setShowLoginForm] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
 
   const handleProfileClick = (event) => {
     if (isUserLoggedIn) {
@@ -41,29 +59,84 @@ const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
       .slice(0, 2);
   };
 
+  // Navigation items
+  const navItems = [
+    { text: 'Home', href: '/', icon: <HomeIcon /> },
+    { text: 'Destinations', href: '/#destinations', icon: <ExploreIcon /> },
+    { text: 'Categories', href: '/#categories', icon: <CategoryIcon /> },
+    { text: 'Offers', href: '/#offers', icon: <OfferIcon /> },
+    { text: 'Blog', href: '/blog', icon: <BlogIcon /> },
+    { text: 'Contact', href: '/#contact', icon: <ContactIcon /> },
+  ];
+
+  const handleNavClick = (href) => {
+    setMobileOpen(false);
+    if (href.startsWith('/#')) {
+      // Smooth scroll to section
+      const sectionId = href.substring(2);
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      // Navigate to page
+      window.location.href = href;
+    }
+  };
+
   return (
     <header className="header">
       <div className="header-content">
         <div className="logo-container">
           <img src={drexcapeLogo} alt="Drexcape" className="logo" />
         </div>
-        <nav className="nav">
-          <a href="/" className="nav-link">Home</a>
-          <a href="/#destinations" className="nav-link">Destinations</a>
-          <a href="/#categories" className="nav-link">Categories</a>
-          <a href="/#offers" className="nav-link">Offers</a>
-          <a href="/blog" className="nav-link">Blog</a>
-          <a href="/#contact" className="nav-link">Contact</a>
-        </nav>
         
-        {/* Round Profile Button */}
+        {/* Desktop Navigation */}
+        {!isMobile && (
+          <nav className="nav">
+            {navItems.map((item) => (
+              <a key={item.text} href={item.href} className="nav-link">
+                {item.text}
+              </a>
+            ))}
+          </nav>
+        )}
+        
+        {/* Mobile/Desktop Action Buttons */}
         <Box sx={{ 
           display: 'flex', 
-          alignItems: 'center', 
-          ml: 2,
-          position: 'relative',
-          zIndex: 1000
+          alignItems: 'center',
+          gap: 1
         }}>
+        
+          {/* Mobile Menu Button */}
+          {isMobile && (
+            <IconButton
+              onClick={handleDrawerToggle}
+              sx={{
+                color: '#ffffff',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                width: 48,
+                height: 48,
+                '&:hover': {
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  transform: 'scale(1.05)'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <MenuIcon />
+            </IconButton>
+          )}
+          
+          {/* Round Profile Button */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            position: 'relative',
+            zIndex: 1000
+          }}>
           <IconButton
             onClick={handleProfileClick}
             sx={{
@@ -152,7 +225,198 @@ const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
             isUserLoggedIn={isUserLoggedIn}
           />
         )}
+        </Box>
       </div>
+
+      {/* Mobile Side Drawer */}
+      <Drawer
+        variant="temporary"
+        anchor="right"
+        open={mobileOpen}
+        onClose={handleDrawerToggle}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile.
+        }}
+        PaperProps={{
+          sx: {
+            width: 280,
+            background: 'linear-gradient(135deg, #1a0033 0%, #3a006a 100%)',
+            borderLeft: '2px solid rgba(255, 224, 102, 0.3)',
+            boxShadow: '0 0 20px rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
+        {/* Drawer Header */}
+        <Box sx={{ 
+          p: 2, 
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <img src={drexcapeLogo} alt="Drexcape" style={{ height: '40px' }} />
+          <IconButton
+            onClick={handleDrawerToggle}
+            sx={{ color: '#ffffff' }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        {/* Navigation Items */}
+        <List sx={{ pt: 1 }}>
+          {navItems.map((item) => (
+            <ListItem
+              key={item.text}
+              button
+              onClick={() => handleNavClick(item.href)}
+              sx={{
+                color: '#ffffff',
+                '&:hover': {
+                  background: 'rgba(255, 224, 102, 0.1)',
+                  borderLeft: '3px solid #ffe066'
+                },
+                transition: 'all 0.2s ease',
+                py: 1.5
+              }}
+            >
+              <Box sx={{ mr: 2, color: '#ffe066' }}>
+                {item.icon}
+              </Box>
+              <ListItemText 
+                primary={item.text}
+                sx={{
+                  '& .MuiListItemText-primary': {
+                    fontFamily: 'Rajdhani, sans-serif',
+                    fontWeight: '500',
+                    fontSize: '1.1rem'
+                  }
+                }}
+              />
+            </ListItem>
+          ))}
+        </List>
+
+        <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)', my: 2 }} />
+
+        {/* User Profile Section */}
+        <Box sx={{ p: 2 }}>
+          {isUserLoggedIn ? (
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2,
+              p: 2,
+              background: 'rgba(255, 224, 102, 0.1)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 224, 102, 0.3)'
+            }}>
+              <Avatar sx={{ 
+                bgcolor: '#ffe066', 
+                color: '#1a0033',
+                fontWeight: 'bold'
+              }}>
+                {getInitials(userData?.name)}
+              </Avatar>
+              <Box>
+                <Typography sx={{ 
+                  color: '#ffffff', 
+                  fontWeight: '600',
+                  fontFamily: 'Rajdhani, sans-serif'
+                }}>
+                  {userData?.name || 'User'}
+                </Typography>
+                <Typography sx={{ 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: '0.9rem',
+                  fontFamily: 'Rajdhani, sans-serif'
+                }}>
+                  {userData?.phone || 'User'}
+                </Typography>
+              </Box>
+            </Box>
+          ) : (
+            <Box sx={{ 
+              p: 2,
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>
+              <Typography sx={{ 
+                color: '#ffffff',
+                textAlign: 'center',
+                fontFamily: 'Rajdhani, sans-serif',
+                mb: 1
+              }}>
+                Welcome Guest
+              </Typography>
+              <Typography sx={{ 
+                color: 'rgba(255, 255, 255, 0.7)',
+                textAlign: 'center',
+                fontSize: '0.9rem',
+                fontFamily: 'Rajdhani, sans-serif'
+              }}>
+                Sign in to access your account
+              </Typography>
+            </Box>
+          )}
+        </Box>
+
+        {/* Login/Logout Button */}
+        <Box sx={{ p: 2, mt: 'auto' }}>
+          {isUserLoggedIn ? (
+            <IconButton
+              onClick={() => {
+                onUserLogout();
+                handleDrawerToggle();
+              }}
+              fullWidth
+              sx={{
+                background: 'linear-gradient(135deg, #ff4444, #cc3333)',
+                color: '#ffffff',
+                py: 1.5,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #cc3333, #ff4444)',
+                  transform: 'scale(1.02)'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Typography sx={{ 
+                fontFamily: 'Rajdhani, sans-serif',
+                fontWeight: '600'
+              }}>
+                Logout
+              </Typography>
+            </IconButton>
+          ) : (
+            <IconButton
+              onClick={() => {
+                setShowLoginForm(true);
+                handleDrawerToggle();
+              }}
+              fullWidth
+              sx={{
+                background: 'linear-gradient(135deg, #ffe066, #ffd700)',
+                color: '#1a0033',
+                py: 1.5,
+                '&:hover': {
+                  background: 'linear-gradient(135deg, #ffd700, #ffe066)',
+                  transform: 'scale(1.02)'
+                },
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Typography sx={{ 
+                fontFamily: 'Rajdhani, sans-serif',
+                fontWeight: '600'
+              }}>
+                Sign In
+              </Typography>
+            </IconButton>
+          )}
+        </Box>
+      </Drawer>
     </header>
   );
 };

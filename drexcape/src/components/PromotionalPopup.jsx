@@ -19,8 +19,7 @@ import {
   Discount as DiscountIcon,
   Flight as FlightIcon,
   Person as PersonIcon,
-  Phone as PhoneIcon,
-  CheckCircle as CheckCircleIcon
+  Phone as PhoneIcon
 } from '@mui/icons-material';
 import { setCookie, getCookie, hasUserFilledContactForm, markUserAsContacted, deleteCookie } from '../utils/cookies';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
@@ -38,24 +37,10 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState({});
-  const [userProfile, setUserProfile] = useState(null);
-
-  // Check if user has already submitted the form and handle auto-open
+  // Handle auto-open
   useEffect(() => {
     console.log('🎭 === PromotionalPopup useEffect called ===');
     console.log('  - forceOpen:', forceOpen);
-    
-    // Check if user has already submitted the form
-    const existingUserData = getCookie('drexcape_user_data');
-    if (existingUserData) {
-      try {
-        const userData = JSON.parse(existingUserData);
-        setUserProfile(userData);
-        console.log('👤 Found existing user profile:', userData);
-      } catch (error) {
-        console.error('Error parsing user data:', error);
-      }
-    }
     
     // Auto-open after 5 seconds if not forced open
     if (!forceOpen) {
@@ -257,7 +242,6 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
   console.log('  - open state:', open);
   console.log('  - forceOpen prop:', forceOpen);
   console.log('  - submitted state:', submitted);
-  console.log('  - userProfile:', userProfile);
 
   return (
     <Dialog
@@ -303,261 +287,177 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
               textShadow: '0 0 10px rgba(255, 224, 102, 0.3)'
             }}
           >
-            {userProfile ? '🎉 Welcome Back!' : '🎉 Exclusive Travel Offers!'}
+            🎉 Exclusive Travel Offers!
           </Typography>
         </Box>
       </DialogTitle>
 
-      <DialogContent sx={{ color: '#ffffff' }}>
-        {!submitted ? (
-          <>
-            {userProfile ? (
-              // Show user profile if they've already submitted
-              <Box sx={{ textAlign: 'center', py: 2 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-                  <Avatar 
-                    sx={{ 
-                      width: 80, 
-                      height: 80, 
-                      bgcolor: '#ffe066',
-                      color: '#1a0033',
-                      fontSize: '2rem',
-                      fontWeight: 'bold'
-                    }}
-                  >
-                    {userProfile.name.charAt(0).toUpperCase()}
-                  </Avatar>
-                </Box>
-                
-                <Typography variant="h6" sx={{ color: '#ffe066', mb: 2 }}>
-                  Welcome back, {userProfile.name}! 👋
-                </Typography>
-                
-                <Box sx={{ 
-                  background: 'rgba(255, 224, 102, 0.1)', 
-                  borderRadius: '12px', 
-                  p: 2, 
-                  mb: 3,
-                  border: '1px solid rgba(255, 224, 102, 0.3)'
-                }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <PersonIcon sx={{ color: '#ffe066', fontSize: 20 }} />
-                    <Typography variant="body1" sx={{ color: '#ffffff' }}>
-                      {userProfile.name}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <PhoneIcon sx={{ color: '#ffe066', fontSize: 20 }} />
-                    <Typography variant="body1" sx={{ color: '#ffffff' }}>
-                      {userProfile.phone}
-                    </Typography>
-                  </Box>
-                </Box>
-                
-                <Typography variant="body1" sx={{ color: '#ffffff', mb: 2 }}>
-                  You're already part of our exclusive travel community! 
-                  Check your phone for the latest offers.
-                </Typography>
-                
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2 }}>
-                  <Chip 
-                    icon={<CheckCircleIcon />} 
-                    label="Profile Verified" 
-                    sx={{ 
-                      background: 'linear-gradient(135deg, #4caf50, #45a049)',
-                      color: '#ffffff',
-                      fontWeight: 'bold'
-                    }} 
-                  />
-                  <Chip 
-                    icon={<FlightIcon />} 
-                    label="VIP Member" 
-                    sx={{ 
-                      background: 'linear-gradient(135deg, #ffe066, #ffd700)',
-                      color: '#1a0033',
-                      fontWeight: 'bold'
-                    }} 
-                  />
-                </Box>
-                
-                <Typography variant="body2" sx={{ 
-                  color: 'rgba(255, 255, 255, 0.7)', 
-                  fontSize: '0.9rem',
-                  textAlign: 'center',
-                  fontFamily: 'Rajdhani, sans-serif',
-                  fontWeight: '400'
-                }}>
-                  🔒 Your profile is secure and you'll receive exclusive offers!
-                </Typography>
-              </Box>
-            ) : (
-              // Show form for new users
-              <>
-                <Box sx={{ mb: 3, textAlign: 'center' }}>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      color: '#ffe066', 
-                      mb: 2,
-                      fontFamily: 'Rajdhani, sans-serif',
-                      fontWeight: '600',
-                      letterSpacing: '0.3px'
-                    }}
-                  >
-                    Unlock Amazing Deals!
-                  </Typography>
-                  <Typography 
-                    variant="body1" 
-                    sx={{ 
-                      mb: 2, 
-                      opacity: 0.9,
-                      fontFamily: 'Rajdhani, sans-serif',
-                      fontWeight: '400',
-                      fontSize: '1.1rem'
-                    }}
-                  >
-                    Get exclusive discounts and personalized travel recommendations
-                  </Typography>
-                  
-                  <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mb: 3 }}>
-                    <Chip 
-                      icon={<FlightIcon />} 
-                      label="Up to 40% OFF" 
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #ffe066, #ffd700)',
-                        color: '#1a0033',
-                        fontWeight: 'bold'
-                      }} 
-                    />
-                    <Chip 
-                      icon={<OfferIcon />} 
-                      label="Free Travel Guide" 
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #a084e8, #6d3bbd)',
-                        color: '#ffffff',
-                        fontWeight: 'bold'
-                      }} 
-                    />
-                    <Chip 
-                      icon={<DiscountIcon />} 
-                      label="VIP Access" 
-                      sx={{ 
-                        background: 'linear-gradient(135deg, #ff4ecd, #a084e8)',
-                        color: '#ffffff',
-                        fontWeight: 'bold'
-                      }} 
-                    />
-                  </Box>
-                </Box>
+             <DialogContent sx={{ color: '#ffffff' }}>
+         {!submitted ? (
+           <>
+             <Box sx={{ mb: 3, textAlign: 'center' }}>
+               <Typography 
+                 variant="h6" 
+                 sx={{ 
+                   color: '#ffe066', 
+                   mb: 2,
+                   fontFamily: 'Rajdhani, sans-serif',
+                   fontWeight: '600',
+                   letterSpacing: '0.3px'
+                 }}
+               >
+                 Unlock Amazing Deals!
+               </Typography>
+               <Typography 
+                 variant="body1" 
+                 sx={{ 
+                   mb: 2, 
+                   opacity: 0.9,
+                   fontFamily: 'Rajdhani, sans-serif',
+                   fontWeight: '400',
+                   fontSize: '1.1rem'
+                 }}
+               >
+                 Get exclusive discounts and personalized travel recommendations
+               </Typography>
+               
+               <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mb: 3 }}>
+                 <Chip 
+                   icon={<FlightIcon />} 
+                   label="Up to 40% OFF" 
+                   sx={{ 
+                     background: 'linear-gradient(135deg, #ffe066, #ffd700)',
+                     color: '#1a0033',
+                     fontWeight: 'bold'
+                   }} 
+                 />
+                 <Chip 
+                   icon={<OfferIcon />} 
+                   label="Free Travel Guide" 
+                   sx={{ 
+                     background: 'linear-gradient(135deg, #a084e8, #6d3bbd)',
+                     color: '#ffffff',
+                     fontWeight: 'bold'
+                   }} 
+                 />
+                 <Chip 
+                   icon={<DiscountIcon />} 
+                   label="VIP Access" 
+                   sx={{ 
+                     background: 'linear-gradient(135deg, #ff4ecd, #a084e8)',
+                     color: '#ffffff',
+                     fontWeight: 'bold'
+                   }} 
+                 />
+               </Box>
+             </Box>
 
-                <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Your Name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    error={!!errors.name}
-                    helperText={errors.name}
-                    placeholder="Enter your full name"
-                    sx={{
-                      mb: 2,
-                      '& .MuiOutlinedInput-root': {
-                        color: '#ffffff',
-                        fontFamily: 'Rajdhani, sans-serif',
-                        fontWeight: '500',
-                        fontSize: '1.1rem',
-                        '& fieldset': {
-                          borderColor: errors.name ? '#ff4444' : 'rgba(255, 224, 102, 0.5)',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: errors.name ? '#ff4444' : '#ffe066',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: errors.name ? '#ff4444' : '#ffe066',
-                        },
-                        '&.Mui-error fieldset': {
-                          borderColor: '#ff4444',
-                        },
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: errors.name ? '#ff4444' : 'rgba(255, 255, 255, 0.7)',
-                        fontFamily: 'Rajdhani, sans-serif',
-                        fontWeight: '500',
-                        '&.Mui-focused': {
-                          color: errors.name ? '#ff4444' : '#ffe066',
-                        },
-                      },
-                      '& .MuiFormHelperText-root': {
-                        color: '#ff4444',
-                        fontFamily: 'Rajdhani, sans-serif',
-                        fontSize: '0.9rem',
-                      },
-                    }}
-                    required
-                  />
-                  
-                  <TextField
-                    fullWidth
-                    label="Phone Number"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    error={!!errors.phone}
-                    helperText={errors.phone}
-                    placeholder="Enter your phone number"
-                    sx={{
-                      mb: 3,
-                      '& .MuiOutlinedInput-root': {
-                        color: '#ffffff',
-                        fontFamily: 'Rajdhani, sans-serif',
-                        fontWeight: '500',
-                        fontSize: '1.1rem',
-                        '& fieldset': {
-                          borderColor: errors.phone ? '#ff4444' : 'rgba(255, 224, 102, 0.5)',
-                        },
-                        '&:hover fieldset': {
-                          borderColor: errors.phone ? '#ff4444' : '#ffe066',
-                        },
-                        '&.Mui-focused fieldset': {
-                          borderColor: errors.phone ? '#ff4444' : '#ffe066',
-                        },
-                        '&.Mui-error fieldset': {
-                          borderColor: '#ff4444',
-                        },
-                      },
-                      '& .MuiInputLabel-root': {
-                        color: errors.phone ? '#ff4444' : 'rgba(255, 255, 255, 0.7)',
-                        fontFamily: 'Rajdhani, sans-serif',
-                        fontWeight: '500',
-                        '&.Mui-focused': {
-                          color: errors.phone ? '#ff4444' : '#ffe066',
-                        },
-                      },
-                      '& .MuiFormHelperText-root': {
-                        color: '#ff4444',
-                        fontFamily: 'Rajdhani, sans-serif',
-                        fontSize: '0.9rem',
-                      },
-                    }}
-                    required
-                  />
+             <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+               <TextField
+                 fullWidth
+                 label="Your Name"
+                 name="name"
+                 value={formData.name}
+                 onChange={handleInputChange}
+                 error={!!errors.name}
+                 helperText={errors.name}
+                 placeholder="Enter your full name"
+                 sx={{
+                   mb: 2,
+                   '& .MuiOutlinedInput-root': {
+                     color: '#ffffff',
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontWeight: '500',
+                     fontSize: '1.1rem',
+                     '& fieldset': {
+                       borderColor: errors.name ? '#ff4444' : 'rgba(255, 224, 102, 0.5)',
+                     },
+                     '&:hover fieldset': {
+                       borderColor: errors.name ? '#ff4444' : '#ffe066',
+                     },
+                     '&.Mui-focused fieldset': {
+                       borderColor: errors.name ? '#ff4444' : '#ffe066',
+                     },
+                     '&.Mui-error fieldset': {
+                       borderColor: '#ff4444',
+                     },
+                   },
+                   '& .MuiInputLabel-root': {
+                     color: errors.name ? '#ff4444' : 'rgba(255, 255, 255, 0.7)',
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontWeight: '500',
+                     '&.Mui-focused': {
+                       color: errors.name ? '#ff4444' : '#ffe066',
+                     },
+                   },
+                   '& .MuiFormHelperText-root': {
+                     color: '#ff4444',
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontSize: '0.9rem',
+                   },
+                 }}
+                 required
+               />
+               
+               <TextField
+                 fullWidth
+                 label="Phone Number"
+                 name="phone"
+                 value={formData.phone}
+                 onChange={handleInputChange}
+                 error={!!errors.phone}
+                 helperText={errors.phone}
+                 placeholder="Enter your phone number"
+                 sx={{
+                   mb: 3,
+                   '& .MuiOutlinedInput-root': {
+                     color: '#ffffff',
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontWeight: '500',
+                     fontSize: '1.1rem',
+                     '& fieldset': {
+                       borderColor: errors.phone ? '#ff4444' : 'rgba(255, 224, 102, 0.5)',
+                     },
+                     '&:hover fieldset': {
+                       borderColor: errors.phone ? '#ff4444' : '#ffe066',
+                     },
+                     '&.Mui-focused fieldset': {
+                       borderColor: errors.phone ? '#ff4444' : '#ffe066',
+                     },
+                     '&.Mui-error fieldset': {
+                       borderColor: '#ff4444',
+                     },
+                   },
+                   '& .MuiInputLabel-root': {
+                     color: errors.phone ? '#ff4444' : 'rgba(255, 255, 255, 0.7)',
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontWeight: '500',
+                     '&.Mui-focused': {
+                       color: errors.phone ? '#ff4444' : '#ffe066',
+                     },
+                   },
+                   '& .MuiFormHelperText-root': {
+                     color: '#ff4444',
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontSize: '0.9rem',
+                   },
+                 }}
+                 required
+               />
 
-                  <Typography variant="body2" sx={{ 
-                    color: 'rgba(255, 255, 255, 0.7)', 
-                    fontSize: '0.9rem',
-                    textAlign: 'center',
-                    mb: 2,
-                    fontFamily: 'Rajdhani, sans-serif',
-                    fontWeight: '400'
-                  }}>
-                    🔒 Your data is secure. We'll only send you amazing travel deals!
-                  </Typography>
-                </Box>
-              </>
-            )}
-          </>
-        ) : (
+               <Typography variant="body2" sx={{ 
+                 color: 'rgba(255, 255, 255, 0.7)', 
+                 fontSize: '0.9rem',
+                 textAlign: 'center',
+                 mb: 2,
+                 fontFamily: 'Rajdhani, sans-serif',
+                 fontWeight: '400'
+               }}>
+                 🔒 Your data is secure. We'll only send you amazing travel deals!
+               </Typography>
+             </Box>
+           </>
+         ) : (
           <Box sx={{ textAlign: 'center', py: 2 }}>
             <Typography variant="h6" sx={{ color: '#ffe066', mb: 2 }}>
               🎉 Thank You!
@@ -579,7 +479,7 @@ const PromotionalPopup = ({ onFormSubmitted, forceOpen = false }) => {
         )}
       </DialogContent>
 
-      {!submitted && !userProfile && (
+      {!submitted && (
         <DialogActions sx={{ p: 3, pt: 0 }}>
           <Button
             onClick={handleClose}

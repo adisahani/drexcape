@@ -211,7 +211,14 @@ const BlogList = () => {
     }}>
 
       
-      <Box sx={{ maxWidth: 1200, margin: '0 auto', padding: 3, pt: 12 }}>
+      <Box sx={{ 
+        maxWidth: 1200, 
+        margin: '0 auto', 
+        padding: { xs: 2, sm: 3 }, 
+        pt: { xs: 10, sm: 12 },
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
         {/* Back to Home Button */}
         <Button
           variant="outlined"
@@ -236,13 +243,14 @@ const BlogList = () => {
         <Box sx={{ 
           mb: 4, 
           display: 'flex', 
-          gap: 2, 
+          gap: { xs: 1, sm: 2 }, 
           flexWrap: 'wrap',
           background: 'rgba(255, 255, 255, 0.9)',
           backdropFilter: 'blur(10px)',
           borderRadius: 2,
-          p: 3,
-          border: '1px solid rgba(160, 132, 232, 0.3)'
+          p: { xs: 2, sm: 3 },
+          border: '1px solid rgba(160, 132, 232, 0.3)',
+          justifyContent: 'center'
         }}>
           <TextField
             placeholder="Search blogs..."
@@ -317,7 +325,7 @@ const BlogList = () => {
         )}
 
                  {/* Blog Grid */}
-         <Grid container spacing={3} sx={{ pt: 4 }}>
+         <Grid container spacing={{ xs: 2, sm: 3 }} sx={{ pt: 4, justifyContent: 'center' }}>
           {blogs.map((blog) => (
             <Grid item xs={12} sm={6} md={4} lg={3} xl={3} key={blog._id}>
               <Card 

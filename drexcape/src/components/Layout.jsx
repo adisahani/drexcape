@@ -117,8 +117,12 @@ const StarAnimation = () => {
         
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.r * tw, 0, Math.PI * 2);
-        ctx.fillStyle = star.color.replace(')', `,${tw})`);
+        // Fix: Use proper white color with twinkle opacity and stronger glow
+        ctx.fillStyle = `rgba(255, 255, 255, ${0.4 + tw * 0.6})`;
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = 6 * tw;
         ctx.fill();
+        ctx.shadowBlur = 0;
         
         // Move stars slowly
         star.y += star.speed * 0.1;

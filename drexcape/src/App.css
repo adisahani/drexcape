@@ -32,7 +32,7 @@ body {
 .app {
   min-height: 100vh;
   position: relative;
-  overflow-x: hidden;
+  overflow: hidden; /* Prevent both horizontal and vertical scrolling */
 }
 
 /* ===== PAGE WRAPPER SYSTEM ===== */
@@ -323,6 +323,7 @@ body {
 .app {
   min-height: 100vh;
   position: relative;
+  overflow: hidden; /* Prevent both horizontal and vertical scrolling */
 }
 
 /* ===== UNIFIED BACKGROUND SYSTEM ===== */
@@ -402,9 +403,9 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: -2;
+  z-index: 1; /* Increased to appear above background elements */
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.8; /* Slightly increased opacity for better visibility */
 }
 
 @keyframes gradientShift {
@@ -2582,4 +2583,30 @@ body {
   text-align: center;
   margin-top: 0.5rem;
   font-style: italic;
+}
+
+/* ===== MOBILE PERFORMANCE OPTIMIZATIONS ===== */
+
+/* Disable animations on mobile for better performance */
+@media (max-width: 768px) {
+  /* .cloud {
+    animation: none !important;
+    transform: none !important;
+  } */
+  
+  .liquid-blob {
+    animation: none !important;
+  }
+  
+  /* Reduce backdrop-filter on mobile for better performance */
+  .glass, .card, .step-card, .offer-banner {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  /* Optimize GSAP animations for mobile */
+  .gsap-fade-in {
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

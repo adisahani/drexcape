@@ -24,6 +24,7 @@ import 'swiper/css/pagination';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
+import PromotionalPopup from './PromotionalPopup';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -59,6 +60,17 @@ function ParallaxClouds() {
   // GSAP Cloud Animations
   useEffect(() => {
     if (!cloudsRef.current) return;
+
+    // Check if device is mobile/touch
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isTouchDevice = isMobile && hasTouch;
+
+    // Disable cloud animations on mobile for better performance
+    if (isTouchDevice) {
+      console.log('Mobile device detected - disabling cloud animations for performance');
+      return;
+    }
 
     // Random delay function - much shorter delays
     const getRandomDelay = () => Math.random() * 8; // Random delay between 0-8 seconds (was 30)
@@ -435,6 +447,8 @@ function PopularSearchesSlider() {
 
 const HomePage = () => {
   const { isUserLoggedIn } = useAuth();
+  const [showPromotionalPopup, setShowPromotionalPopup] = useState(false);
+  
   // Refs for sections
   const heroRef = useRef(null)
   const destinationsRef = useRef(null)
@@ -459,37 +473,62 @@ const HomePage = () => {
 
   useEffect(() => {
     try {
-      // GSAP animations for sections
-      gsap.utils.toArray('.gsap-fade-in').forEach((element, index) => {
-        gsap.fromTo(element, 
-          { opacity: 0, y: 50 },
-          { 
-            opacity: 1, 
-            y: 0, 
-            duration: 0.8, 
-            delay: index * 0.2,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: element,
-              start: 'top 80%',
-              end: 'bottom 20%',
-              toggleActions: 'play none none reverse'
-            }
-          }
-        );
-      });
+      // Check if device is mobile/touch
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isTouchDevice = isMobile && hasTouch;
 
-      // Parallax effect for hero title
-      gsap.to('.hero-title', {
-        yPercent: -20,
-        ease: 'none',
-        scrollTrigger: {
-          trigger: '.hero',
-          start: 'top bottom',
-          end: 'bottom top',
-          scrub: true
-        }
-      });
+      // Mobile-optimized GSAP animations
+      if (isTouchDevice) {
+        // Simplified animations for mobile devices
+        gsap.utils.toArray('.gsap-fade-in').forEach((element, index) => {
+          gsap.fromTo(element, 
+            { opacity: 0, y: 20 }, // Reduced movement for mobile
+            { 
+              opacity: 1, 
+              y: 0, 
+              duration: 0.6, // Faster duration for mobile
+              delay: index * 0.1, // Shorter delays
+              ease: 'power2.out'
+            }
+          );
+        });
+
+        // Disable parallax on mobile for better performance
+        console.log('Mobile device detected - using simplified animations');
+      } else {
+        // Full animations for desktop
+        gsap.utils.toArray('.gsap-fade-in').forEach((element, index) => {
+          gsap.fromTo(element, 
+            { opacity: 0, y: 50 },
+            { 
+              opacity: 1, 
+              y: 0, 
+              duration: 0.8, 
+              delay: index * 0.2,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: element,
+                start: 'top 80%',
+                end: 'bottom 20%',
+                toggleActions: 'play none none reverse'
+              }
+            }
+          );
+        });
+
+        // Parallax effect for hero title (desktop only)
+        gsap.to('.hero-title', {
+          yPercent: -20,
+          ease: 'none',
+          scrollTrigger: {
+            trigger: '.hero',
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: true
+          }
+        });
+      }
 
       // Cleanup function
       return () => {
@@ -503,22 +542,39 @@ const HomePage = () => {
   // GSAP Animations
   useEffect(() => {
     try {
+      // Check if device is mobile/touch
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isTouchDevice = isMobile && hasTouch;
+
       if (heroRef.current) {
         gsap.fromTo(
           heroRef.current.querySelectorAll('.gsap-fade-in'),
-          { opacity: 0, y: 40 },
-          { opacity: 1, y: 0, stagger: 0.15, duration: 1, ease: 'power3.out', delay: 0.2 }
+          { opacity: 0, y: isTouchDevice ? 20 : 40 }, // Reduced movement for mobile
+          { 
+            opacity: 1, 
+            y: 0, 
+            stagger: isTouchDevice ? 0.1 : 0.15, // Faster stagger for mobile
+            duration: isTouchDevice ? 0.6 : 1, // Faster duration for mobile
+            ease: 'power3.out', 
+            delay: isTouchDevice ? 0.1 : 0.2 
+          }
         )
       }
+      
       const sections = [destinationsRef, categoriesRef, stepsRef, offersRef]
       sections.forEach(ref => {
         if (ref.current) {
           gsap.fromTo(
             ref.current.querySelectorAll('.gsap-fade-in'),
-            { opacity: 0, y: 40 },
+            { opacity: 0, y: isTouchDevice ? 20 : 40 },
             {
-              opacity: 1, y: 0, stagger: 0.15, duration: 1, ease: 'power3.out',
-              scrollTrigger: {
+              opacity: 1, 
+              y: 0, 
+              stagger: isTouchDevice ? 0.1 : 0.15, 
+              duration: isTouchDevice ? 0.6 : 1, 
+              ease: 'power3.out',
+              scrollTrigger: isTouchDevice ? undefined : {
                 trigger: ref.current,
                 start: "top 80%",
                 toggleActions: "play none none none",
@@ -527,21 +583,25 @@ const HomePage = () => {
           )
         }
       })
-      const cardSelectors = [
-        '.destination-card',
-        '.category-card',
-        '.step-card',
-      ]
-      cardSelectors.forEach(selector => {
-        document.querySelectorAll(selector).forEach(card => {
-          card.addEventListener('mouseenter', () => {
-            gsap.to(card, { scale: 1.03, boxShadow: '0 0 32px #a084e888', duration: 0.35, ease: 'power2.out' })
-          })
-          card.addEventListener('mouseleave', () => {
-            gsap.to(card, { scale: 1, boxShadow: '0 8px 32px 0 #a084e822', duration: 0.35, ease: 'power2.inOut' })
+      
+      // Only add hover effects on non-touch devices
+      if (!isTouchDevice) {
+        const cardSelectors = [
+          '.destination-card',
+          '.category-card',
+          '.step-card',
+        ]
+        cardSelectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(card => {
+            card.addEventListener('mouseenter', () => {
+              gsap.to(card, { scale: 1.03, boxShadow: '0 0 32px #a084e888', duration: 0.35, ease: 'power2.out' })
+            })
+            card.addEventListener('mouseleave', () => {
+              gsap.to(card, { scale: 1, boxShadow: '0 8px 32px 0 #a084e822', duration: 0.35, ease: 'power2.inOut' })
+            })
           })
         })
-      })
+      }
     } catch (error) {
       console.error('GSAP animation error:', error);
     }
@@ -562,7 +622,7 @@ const HomePage = () => {
             AI-powered journeys, personalized for you.
           </p>
           {!isUserLoggedIn && (
-            <button className="hero-cta-btn gsap-fade-in" onClick={() => console.log('Login button clicked')}>
+            <button className="hero-cta-btn gsap-fade-in" onClick={() => setShowPromotionalPopup(true)}>
               Plan My Escape <ArrowForwardIosIcon style={{fontSize: '1.1em', marginLeft: '0.5em'}} />
             </button>
           )}
@@ -613,7 +673,7 @@ const HomePage = () => {
             <h3>20% OFF</h3>
             <p>On all bookings till 28 September, 2023</p>
             {!isUserLoggedIn && (
-              <button className="cta-primary" onClick={() => console.log('Book Now clicked')}>Book Now</button>
+              <button className="cta-primary" onClick={() => setShowPromotionalPopup(true)}>Book Now</button>
             )}
           </div>
         </div>
@@ -623,6 +683,12 @@ const HomePage = () => {
       <footer className="powered-by">
         <p>Powered by <span className="company-name">Dream Place Tour & Travels</span></p>
       </footer>
+
+      {/* Promotional Popup */}
+      <PromotionalPopup 
+        forceOpen={showPromotionalPopup}
+        onFormSubmitted={() => setShowPromotionalPopup(false)}
+      />
     </>
   );
 };
