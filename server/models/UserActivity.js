@@ -41,7 +41,7 @@ const userActivitySchema = new mongoose.Schema({
   formData: {
     formType: {
       type: String,
-      enum: ['promotional', 'contact', 'newsletter', 'feedback']
+      enum: ['promotional', 'contact', 'newsletter', 'feedback', 'user_login', 'user_register']
     },
     fields: mongoose.Schema.Types.Mixed,
     submissionSource: String, // which page/form

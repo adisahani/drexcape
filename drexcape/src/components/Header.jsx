@@ -11,10 +11,11 @@ const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Check if device is mobile
+  // Check if device is mobile or tablet
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
+      // Include tablets (up to 1024px) for side panel navigation
+      setIsMobile(window.innerWidth <= 1024);
     };
     
     checkMobile();
@@ -102,14 +103,14 @@ const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
           </nav>
         )}
         
-        {/* Mobile/Desktop Action Buttons */}
+        {/* Mobile/Tablet Action Buttons */}
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center',
           gap: 1
         }}>
         
-          {/* Mobile Menu Button */}
+          {/* Mobile/Tablet Menu Button */}
           {isMobile && (
             <IconButton
               onClick={handleDrawerToggle}
@@ -228,7 +229,7 @@ const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
         </Box>
       </div>
 
-      {/* Mobile Side Drawer */}
+      {/* Mobile/Tablet Side Drawer */}
       <Drawer
         variant="temporary"
         anchor="right"

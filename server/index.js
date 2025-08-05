@@ -521,25 +521,47 @@ app.post('/api/itinerary/:id/share', async (req, res) => {
   }
 });
 
-// Pixabay image proxy endpoint
+// In-memory cache for image URLs (simple cache to avoid repeated API calls)
+const imageCache = new Map();
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
+// Pixabay image proxy endpoint with caching and mobile optimization
 app.get('/api/place-image', trackAIUsage('place-image'), async (req, res) => {
   let place = req.query.place || '';
   let destination = req.query.destination || '';
+  const isMobile = req.headers['user-agent']?.includes('Mobile') || req.query.mobile === 'true';
   const PIXABAY_API_KEY = process.env.PIXABAY_API_KEY;
   
-  console.log('Place image request:', { place, destination });
+  // Create cache key
+  const cacheKey = `${place}-${destination}-${isMobile}`;
+  
+  // Check cache first
+  const cached = imageCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < CACHE_DURATION) {
+    console.log('Serving from cache:', cacheKey);
+    return res.json({ imageUrl: cached.imageUrl });
+  }
+  
+  console.log('Place image request:', { place, destination, isMobile });
   console.log('PIXABAY_API_KEY exists:', !!PIXABAY_API_KEY);
   
   if (!PIXABAY_API_KEY) {
     console.error('PIXABAY_API_KEY not found in environment variables');
     console.log('Using default image URLs instead');
-    // Return a default image URL when API key is not available
-    return res.json({ 
-      imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop'
-    });
+    const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop';
+    imageCache.set(cacheKey, { imageUrl: defaultImage, timestamp: Date.now() });
+    return res.json({ imageUrl: defaultImage });
   }
   
-  const tryTerms = [place, destination, 'India travel'];
+  // Optimized search terms for better results
+  const tryTerms = [
+    `${place} ${destination}`,
+    place,
+    destination,
+    'India travel',
+    'travel destination'
+  ].filter(term => term && term.trim());
+  
   try {
     for (let term of tryTerms) {
       if (!term) continue;
@@ -552,30 +574,44 @@ app.get('/api/place-image', trackAIUsage('place-image'), async (req, res) => {
           image_type: 'photo',
           orientation: 'horizontal',
           safesearch: 'true',
-          per_page: 3,
+          per_page: 5, // Increased for better selection
+          min_width: isMobile ? 400 : 800, // Smaller images for mobile
+          min_height: isMobile ? 300 : 600,
         },
+        timeout: 5000, // 5 second timeout
       });
       
       const hits = pixabayRes.data.hits;
       console.log('Pixabay response hits:', hits?.length || 0);
       
       if (hits && hits.length > 0) {
-        console.log('Found image URL:', hits[0].webformatURL);
-        return res.json({ imageUrl: hits[0].webformatURL });
+        // Select best image (prefer higher resolution for desktop)
+        const selectedHit = isMobile ? hits[0] : hits.find(hit => hit.imageWidth >= 800) || hits[0];
+        const imageUrl = selectedHit.webformatURL;
+        
+        console.log('Found image URL:', imageUrl);
+        
+        // Cache the result
+        imageCache.set(cacheKey, { imageUrl, timestamp: Date.now() });
+        
+        return res.json({ imageUrl });
       }
     }
+    
     // If all fail, return a default image
     console.log('No images found for any terms, using default');
-    return res.json({ 
-      imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop'
-    });
+    const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop';
+    imageCache.set(cacheKey, { imageUrl: defaultImage, timestamp: Date.now() });
+    return res.json({ imageUrl: defaultImage });
+    
   } catch (err) {
     console.error('Pixabay error:', err?.response?.data || err);
     console.error('Pixabay error details:', err.message);
     console.log('Using default image due to Pixabay error');
-    return res.json({ 
-      imageUrl: 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop'
-    });
+    
+    const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d75df4?w=400&h=300&fit=crop';
+    imageCache.set(cacheKey, { imageUrl: defaultImage, timestamp: Date.now() });
+    return res.json({ imageUrl: defaultImage });
   }
 });
 

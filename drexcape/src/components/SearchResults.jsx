@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 import ReactMarkdown from 'react-markdown';
-import { Typography, Button } from '@mui/material';
+import { Typography, Button, CircularProgress } from '@mui/material';
 import { Lock as LockIcon } from '@mui/icons-material';
 import UserLogin from './UserLogin';
 import PageWrapper from './PageWrapper';
@@ -101,6 +101,7 @@ const SearchResults = () => {
   const [pendingItinerary, setPendingItinerary] = useState(null);
   const [showLoginForm, setShowLoginForm] = useState(false);
   const [userHasAccess, setUserHasAccess] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
   
   // Get authentication state from context
   const { isUserLoggedIn, handleUserLogin } = useAuth();
@@ -287,12 +288,26 @@ const SearchResults = () => {
   }, [from, to, startDate, endDate, travellers, travelClass, retryCount, retryDelay, navigate]);
 
   // Fetch image for a place
+  // Mobile detection
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+           window.innerWidth <= 768;
+  };
+
   const fetchImage = async (place, destination, idx) => {
     if (!place && !destination) return;
+    
+    // Skip if already loading for this index
+    if (imageUrls[idx] && imageUrls[idx] !== '/default-travel.jpg') {
+      return;
+    }
+    
     try {
       console.log('Fetching image for:', { place, destination, idx });
       
-              const res = await fetch(buildApiUrl(`${API_ENDPOINTS.PLACE_IMAGE}?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}`));
+      // Add mobile parameter to request
+      const mobileParam = isMobile() ? '&mobile=true' : '';
+      const res = await fetch(buildApiUrl(`${API_ENDPOINTS.PLACE_IMAGE}?place=${encodeURIComponent(place || '')}&destination=${encodeURIComponent(destination || '')}${mobileParam}`));
       
       if (!res.ok) {
         console.error('Place image API error:', res.status, res.statusText);
@@ -303,7 +318,8 @@ const SearchResults = () => {
       console.log('Place image API response:', data);
       
       if (data.imageUrl) {
-        const imageUrl = `/api/proxy-image?url=${encodeURIComponent(data.imageUrl)}`;
+        // Use direct URL for better performance (no proxy needed for external images)
+        const imageUrl = data.imageUrl.startsWith('http') ? data.imageUrl : `/api/proxy-image?url=${encodeURIComponent(data.imageUrl)}`;
         console.log('Setting image URL:', imageUrl);
         setImageUrls(prev => ({ ...prev, [idx]: imageUrl }));
       } else {
@@ -316,51 +332,87 @@ const SearchResults = () => {
     }
   };
 
-  // When aiItineraries change, fetch images for each
+  // When aiItineraries change, fetch images for each with delay to avoid overwhelming the API
   useEffect(() => {
+    if (aiItineraries.length === 0) return;
+    
+    // Batch image requests with delays to avoid overwhelming the API
     aiItineraries.forEach((item, idx) => {
-      if (item.placesToVisit && item.placesToVisit.length > 0) {
-        fetchImage(item.placesToVisit[0], item.destinations?.[0], idx);
-      } else if (item.destinations && item.destinations.length > 0) {
-        fetchImage(null, item.destinations[0], idx);
-      }
+      setTimeout(() => {
+        if (item.placesToVisit && item.placesToVisit.length > 0) {
+          fetchImage(item.placesToVisit[0], item.destinations?.[0], idx);
+        } else if (item.destinations && item.destinations.length > 0) {
+          fetchImage(null, item.destinations[0], idx);
+        }
+      }, idx * 200); // 200ms delay between each request
     });
   }, [aiItineraries]);
 
   const handleViewDetails = async (itinerary, index) => {
+    // Prevent multiple clicks
+    if (isNavigating) {
+      console.log('Navigation already in progress, ignoring click');
+      return;
+    }
+
     try {
-      // Check if user is logged in
-      const userToken = getCookie('drexcape_user_token');
+      setIsNavigating(true);
+      console.log('🔄 Starting view details process for:', itinerary.title);
       
-      if (!userToken) {
+      // Use context state instead of cookie for more reliable mobile detection
+      if (!isUserLoggedIn) {
         console.log('🔒 User is NOT logged in - showing login form');
         setPendingItinerary({ itinerary, index });
         setShowLoginForm(true);
         return;
       }
 
-      console.log('✅ User is logged in - navigating to details');
-      if (itinerary.slug) {
-        const stateData = {
-          from,
-          to,
-          travellers,
-          travelClass,
-          startDate,
-          endDate,
-          itineraryId: itinerary.id,
-          itineraryData: itinerary,
-          imageUrl: itinerary.headerImage || imageUrls[index] || '/default-travel.jpg'
-        };
-        console.log('Navigating to itinerary with state:', stateData);
-        navigate(`/itinerary/${itinerary.slug}`, {
-          state: stateData
-        });
+      console.log('✅ User is logged in - preparing navigation');
+      
+      // Validate itinerary data
+      if (!itinerary || !itinerary.slug) {
+        console.error('Invalid itinerary data:', itinerary);
+        alert('Unable to view details. Please try again.');
+        return;
       }
+
+      // Prepare state data with fallbacks
+      const stateData = {
+        from: from || '',
+        to: to || '',
+        travellers: travellers || 1,
+        travelClass: travelClass || 'Economy',
+        startDate: startDate || '',
+        endDate: endDate || '',
+        itineraryId: itinerary.id || itinerary._id,
+        itineraryData: itinerary,
+        imageUrl: itinerary.headerImage || imageUrls[index] || '/default-travel.jpg'
+      };
+
+      console.log('📋 Navigation state data:', stateData);
+      
+      // Use setTimeout to ensure state is set before navigation (mobile fix)
+      setTimeout(() => {
+        try {
+          navigate(`/itinerary/${itinerary.slug}`, {
+            state: stateData,
+            replace: false // Use push instead of replace for better mobile back button
+          });
+          console.log('✅ Navigation successful');
+        } catch (navError) {
+          console.error('Navigation error:', navError);
+          alert('Navigation failed. Please try again.');
+        }
+      }, 100);
+
     } catch (error) {
-      console.error('Error checking user login status:', error);
-      setPendingItinerary({ itinerary, index });
-      setShowLoginForm(true);
+      console.error('Error in handleViewDetails:', error);
+      alert('Unable to view details. Please try again.');
+    } finally {
+      // Reset navigation state after a delay
+      setTimeout(() => {
+        setIsNavigating(false);
+      }, 1000);
     }
   };
 
@@ -566,9 +618,17 @@ const SearchResults = () => {
               <button 
                 className={`w-full ${isUserLoggedIn ? 'btn-primary' : 'btn-locked'}`}
                 onClick={() => handleViewDetails(itinerary, index)}
+                disabled={isNavigating}
               >
                 {isUserLoggedIn ? (
-                  'View Details'
+                  isNavigating ? (
+                    <>
+                      <CircularProgress size={16} style={{ marginRight: '0.5rem' }} />
+                      Loading...
+                    </>
+                  ) : (
+                    'View Details'
+                  )
                 ) : (
                   <>
                     <LockIcon style={{ fontSize: '1rem', marginRight: '0.5rem' }} />
