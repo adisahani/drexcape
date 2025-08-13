@@ -68,7 +68,7 @@ class ImageService {
       );
 
       if (!searchResponse.data.results?.length) {
-        console.log(`❌ No Google Places results for: ${placeQuery}`);
+        // console.log(`❌ No Google Places results for: ${placeQuery}`);
         return null;
       }
 
@@ -94,7 +94,7 @@ class ImageService {
           const photoRef = detailsResponse.data.result.photos[0].photo_reference;
           const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${maxWidth}&photoreference=${photoRef}&key=${GOOGLE_PLACES_API_KEY}`;
           
-          console.log(`✅ Google Places photo found for: ${placeQuery} (${place.name})`);
+          // console.log(`✅ Google Places photo found for: ${placeQuery} (${place.name})`);
           return photoUrl;
         }
       }
@@ -162,35 +162,31 @@ class ImageService {
   async getImagesForPackage(packageData) {
     const { packageName, destinations, placesToVisit, highlights } = packageData;
     
-    // Generate image search queries - REDUCED TO 3 IMAGES MAXIMUM
+    // Generate image search queries - 3 IMAGES TOTAL
     const headerImageQuery = `scenic wide-angle view of ${destinations?.[0] || 'travel destination'}`;
-    const galleryImageQueries = [
-      placesToVisit?.[0] || `${destinations?.[0]} landmark`,
-      highlights?.[0] || `${destinations?.[0]} cultural activity`
-    ].filter(query => query);
+    const accommodationImageQuery = `luxury hotel accommodation in ${destinations?.[0] || 'travel destination'}`;
+    const galleryImageQuery = placesToVisit?.[0] || `${destinations?.[0]} landmark`;
     
-    // REMOVED: accommodationImageQuery to save costs
+    // console.log(`🖼️ Generating images for package: ${packageName} (3 IMAGES TOTAL)`);
+    // console.log(`📸 Header query: ${headerImageQuery}`);
+    // console.log(`🏨 Accommodation query: ${accommodationImageQuery}`);
+    // console.log(`🖼️ Gallery query: ${galleryImageQuery}`);
 
-    console.log(`🖼️ Generating images for package: ${packageName} (MAX 3 IMAGES)`);
-    console.log(`📸 Header query: ${headerImageQuery}`);
-    console.log(`🖼️ Gallery queries:`, galleryImageQueries);
+    // Try Google Places for all three images
+    const [headerImage, accommodationImage, galleryImage] = await Promise.all([
+      this.getGooglePlacePhoto(headerImageQuery),
+      this.getGooglePlacePhoto(accommodationImageQuery),
+      this.getGooglePlacePhoto(galleryImageQuery)
+    ]);
 
-    // Try Google Places for header and gallery images (MAX 3 TOTAL)
-    const headerImage = await this.getGooglePlacePhoto(headerImageQuery);
-    const galleryImages = await Promise.all(
-      galleryImageQueries.map(async (query) => {
-        return await this.getGooglePlacePhoto(query);
-      })
-    );
-
-    // Generate images with Google Places priority - MAX 3 IMAGES
+    // Generate images with Google Places priority - 3 IMAGES TOTAL
     const images = {
       header: headerImage || this.defaultImages.header,
-      gallery: galleryImages.map((img, i) => img || this.defaultImages.gallery[i]).slice(0, 2), // MAX 2 gallery images
-      accommodation: this.defaultImages.accommodation // Use default to save costs
+      accommodation: accommodationImage || this.defaultImages.accommodation,
+      gallery: [galleryImage || this.defaultImages.gallery[0]] // 1 gallery image
     };
 
-    console.log(`✅ Image generation completed for: ${packageName} (${images.gallery.length + 1} images total)`);
+    // console.log(`✅ Image generation completed for: ${packageName} (3 images total: header, accommodation, gallery)`);
     return images;
   }
 

@@ -19,7 +19,7 @@ const trackAIUsage = (endpoint) => {
       const responseStatus = res.statusCode < 400 ? 'success' : 'error';
       
       // Save usage data asynchronously (don't block response)
-      saveUsageData(endpoint, requestData, responseStatus, responseTime, req);
+      saveUsageData(endpoint, requestData, data, responseStatus, responseTime, req);
       
       return originalSend.call(this, data);
     };
@@ -29,7 +29,7 @@ const trackAIUsage = (endpoint) => {
       const responseStatus = res.statusCode < 400 ? 'success' : 'error';
       
       // Save usage data asynchronously (don't block response)
-      saveUsageData(endpoint, requestData, responseStatus, responseTime, req);
+      saveUsageData(endpoint, requestData, data, responseStatus, responseTime, req);
       
       return originalJson.call(this, data);
     };
@@ -38,7 +38,7 @@ const trackAIUsage = (endpoint) => {
   };
 };
 
-const saveUsageData = async (endpoint, requestData, responseStatus, responseTime, req) => {
+const saveUsageData = async (endpoint, requestData, responseData, responseStatus, responseTime, req) => {
   try {
     // Skip if MongoDB is not connected
     if (!process.env.MONGODB_URI) {
@@ -49,6 +49,7 @@ const saveUsageData = async (endpoint, requestData, responseStatus, responseTime
       endpoint,
       userId: req.headers['user-id'] || 'anonymous',
       requestData,
+      responseData, // Add complete response data
       responseStatus,
       responseTime,
       tokensUsed: 0, // Will be calculated based on response
@@ -59,18 +60,21 @@ const saveUsageData = async (endpoint, requestData, responseStatus, responseTime
 
     // Calculate tokens and cost (rough estimation)
     if (responseStatus === 'success') {
-      // Estimate tokens based on request data
+      // Estimate tokens based on request and response data
       const requestText = JSON.stringify(requestData.body || {});
-      usageData.tokensUsed = Math.ceil(requestText.length / 4); // Rough token estimation
+      const responseText = JSON.stringify(responseData || {});
+      usageData.tokensUsed = Math.ceil((requestText.length + responseText.length) / 4); // Rough token estimation
       usageData.cost = (usageData.tokensUsed * 0.0001); // Rough cost estimation
     }
 
-    console.log('🔍 Tracking Debug: Saving usage data for endpoint:', endpoint);
-    console.log('🔍 Tracking Debug: Response status:', responseStatus);
-    console.log('🔍 Tracking Debug: Response time:', responseTime, 'ms');
+            // console.log('🔍 Tracking Debug: Saving usage data for endpoint:', endpoint);
+        // console.log('🔍 Tracking Debug: Response status:', responseStatus);
+        // console.log('🔍 Tracking Debug: Response time:', responseTime, 'ms');
+        // console.log('🔍 Tracking Debug: Request data size:', JSON.stringify(requestData).length, 'chars');
+        // console.log('🔍 Tracking Debug: Response data size:', JSON.stringify(responseData).length, 'chars');
 
     await AIUsage.create(usageData);
-    console.log('🔍 Tracking Debug: Usage data saved successfully');
+            // console.log('🔍 Tracking Debug: Usage data saved successfully');
   } catch (error) {
     console.error('Error saving AI usage data:', error);
     // Don't throw error to avoid affecting the main response

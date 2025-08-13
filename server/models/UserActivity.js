@@ -31,6 +31,10 @@ const userActivitySchema = new mongoose.Schema({
     travellers: Number,
     travelClass: String,
     budget: Number,
+    priceRange: {
+      min: Number,
+      max: Number
+    },
     searchQuery: String,
     resultsCount: Number,
     processingTime: Number, // in milliseconds

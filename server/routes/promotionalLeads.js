@@ -76,11 +76,27 @@ router.post('/submit', async (req, res) => {
 // Get all leads (admin only)
 router.get('/', auth, async (req, res) => {
   try {
+    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page) || 1;
+    
+    // Get total count for pagination
+    const total = await PromotionalLead.countDocuments();
+    
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+    
     const leads = await PromotionalLead.find()
       .sort({ submittedAt: -1 })
-      .limit(100);
+      .skip(skip)
+      .limit(limit);
     
-    res.json(leads);
+    res.json({
+      leads,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
   } catch (error) {
     console.error('Error fetching leads:', error);
     res.status(500).json({ error: 'Failed to fetch leads' });

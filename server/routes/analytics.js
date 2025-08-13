@@ -246,7 +246,8 @@ router.get('/form-conversions', auth, async (req, res) => {
 // Get real-time activity feed
 router.get('/activity-feed', auth, async (req, res) => {
   try {
-    const limit = parseInt(req.query.limit) || 50;
+    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page) || 1;
     const activityType = req.query.type; // optional filter
     const dateRange = req.query.range || '7d';
     const deviceType = req.query.device; // optional filter
@@ -264,8 +265,15 @@ router.get('/activity-feed', auth, async (req, res) => {
       matchStage['deviceInfo.deviceType'] = deviceType;
     }
 
+    // Get total count for pagination
+    const total = await UserActivity.countDocuments(matchStage);
+
+    // Calculate skip value for pagination
+    const skip = (page - 1) * limit;
+
     const activities = await UserActivity.find(matchStage)
       .sort({ timestamp: -1 })
+      .skip(skip)
       .limit(limit)
       .lean();
 
@@ -300,7 +308,13 @@ router.get('/activity-feed', auth, async (req, res) => {
       };
     });
 
-    res.json({ activities: activitiesWithUserDetails });
+    res.json({ 
+      activities: activitiesWithUserDetails,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
 
   } catch (error) {
     console.error('Error fetching activity feed:', error);

@@ -129,7 +129,7 @@ router.get('/ai-usage', auth, requireRole(['admin', 'super_admin']), async (req,
 // Get detailed AI usage logs
 router.get('/ai-usage/logs', auth, requireRole(['admin', 'super_admin']), async (req, res) => {
   try {
-    const { page = 1, limit = 50, endpoint, status } = req.query;
+    const { page = 1, limit = 50, endpoint, status, includeData = 'false' } = req.query;
     const skip = (page - 1) * limit;
 
     // Build query
@@ -137,11 +137,14 @@ router.get('/ai-usage/logs', auth, requireRole(['admin', 'super_admin']), async 
     if (endpoint) query.endpoint = endpoint;
     if (status) query.responseStatus = status;
 
+    // Select fields based on includeData parameter
+    const selectFields = includeData === 'true' ? '' : '-requestData';
+
     const logs = await AIUsage.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
-      .select('-requestData');
+      .select(selectFields);
 
     const total = await AIUsage.countDocuments(query);
 
@@ -157,6 +160,22 @@ router.get('/ai-usage/logs', auth, requireRole(['admin', 'super_admin']), async 
   } catch (error) {
     console.error('AI Usage logs error:', error);
     res.status(500).json({ error: 'Failed to fetch AI usage logs.' });
+  }
+});
+
+// Get detailed AI usage log by ID
+router.get('/ai-usage/logs/:id', auth, requireRole(['admin', 'super_admin']), async (req, res) => {
+  try {
+    const log = await AIUsage.findById(req.params.id);
+    
+    if (!log) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    res.json({ log });
+  } catch (error) {
+    console.error('AI Usage log detail error:', error);
+    res.status(500).json({ error: 'Failed to fetch AI usage log details.' });
   }
 });
 

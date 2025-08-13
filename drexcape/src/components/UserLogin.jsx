@@ -105,7 +105,7 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
       console.log('❌ Phone too long:', cleaned.length);
       return 'Phone number cannot exceed 15 digits';
     }
-    console.log('✅ Phone validation passed');
+    
     return null;
   };
 

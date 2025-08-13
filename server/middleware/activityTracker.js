@@ -44,16 +44,49 @@ const getIpAddress = (req) => {
          (req.connection.socket ? req.connection.socket.remoteAddress : null);
 };
 
-// Get user from JWT token
+// Get user from JWT token or simple authentication
 const getUserFromToken = async (req) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) return null;
     
-    const jwt = require('jsonwebtoken');
-            const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
-    const user = await User.findById(decoded.userId);
-    return user;
+    // If token is 'logged-in', try to get user from session or cookies
+    if (token === 'logged-in') {
+      console.log('🔍 Token is "logged-in", checking session/cookies for user data');
+      
+      // Check session first
+      if (req.session?.userId) {
+        const user = await User.findById(req.session.userId);
+        if (user) {
+          console.log('✅ Found user from session:', user.phone);
+          return user;
+        }
+      }
+      
+      // Check cookies for user data
+      const userFromCookie = await getUserFromCookies(req);
+      if (userFromCookie) {
+        console.log('✅ Found user from cookies:', userFromCookie.phone);
+        return userFromCookie;
+      }
+      
+      console.log('❌ No user found for "logged-in" token');
+      return null;
+    }
+    
+    // Try JWT token verification
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
+      const user = await User.findById(decoded.userId);
+      if (user) {
+        console.log('✅ Found user from JWT token:', user.phone);
+        return user;
+      }
+    } catch (jwtError) {
+      console.log('JWT verification failed:', jwtError.message);
+    }
+    
   } catch (error) {
     console.log('Error getting user from token:', error.message);
   }
@@ -122,6 +155,10 @@ const checkItineraryAccess = async (req, itineraryId) => {
 // Track search activity
 const trackSearch = async (req, searchData, processingTime, resultsCount) => {
   try {
+    console.log('🔍 === trackSearch called ===');
+    console.log('📦 searchData:', searchData);
+    console.log('💰 priceRange:', searchData.priceRange);
+    
     if (!UserActivity || !UserActivity.create) {
       console.log('Activity tracking disabled - UserActivity model not available');
       return;
@@ -160,6 +197,8 @@ const trackSearch = async (req, searchData, processingTime, resultsCount) => {
       }
     }
     
+    console.log('🎯 Final user identification for search - userId:', userId, 'userPhone:', userPhone);
+    
     await UserActivity.create({
       userId,
       sessionId,
@@ -174,6 +213,10 @@ const trackSearch = async (req, searchData, processingTime, resultsCount) => {
         travellers: searchData.travellers,
         travelClass: searchData.travelClass,
         budget: searchData.budget,
+        priceRange: searchData.priceRange ? {
+          min: searchData.priceRange[0],
+          max: searchData.priceRange[1]
+        } : undefined,
         searchQuery: `${searchData.from} to ${searchData.to}`,
         resultsCount,
         processingTime,
@@ -280,6 +323,11 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
 // Track itinerary view
 const trackItineraryView = async (req, itineraryId, itinerarySlug, viewDuration = 0) => {
   try {
+    console.log('👁️ === trackItineraryView called ===');
+    console.log('📦 itineraryId:', itineraryId);
+    console.log('📦 itinerarySlug:', itinerarySlug);
+    console.log('📦 viewDuration:', viewDuration);
+    
     if (!UserActivity || !UserActivity.create) {
       console.log('Activity tracking disabled - UserActivity model not available');
       return;

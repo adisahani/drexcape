@@ -34,8 +34,11 @@ const itineraryDetailsSchema = new mongoose.Schema({
   // Day-wise plan
   fullDayWisePlan: [{
     title: String,
-    description: String,
-    emoji: String
+    emoji: String,
+    description: String, // Keep for backward compatibility
+    morning: String,     // New structured format
+    afternoon: String,   // New structured format
+    evening: String      // New structured format
   }],
   
   // Additional details
@@ -62,6 +65,43 @@ const itineraryDetailsSchema = new mongoose.Schema({
   bookingLink: {
     type: String,
     required: true
+  },
+  
+  // Structured details for better display
+  structuredDetails: {
+    accommodationDetails: {
+      hotelName: String,
+      hotelType: String,
+      nights: Number,
+      roomType: String,
+      amenities: [String],
+      location: String
+    },
+    transportDetails: {
+      arrival: String,
+      departure: String,
+      local: String,
+      included: [String]
+    },
+    mealsDetails: {
+      breakfast: String,
+      lunch: String,
+      dinner: String,
+      included: [String],
+      recommendations: [String]
+    },
+    activitiesDetails: {
+      included: [String],
+      optional: [String],
+      guides: String,
+      tickets: String
+    },
+    termsAndConditions: {
+      priceInclusions: [String],
+      priceExclusions: [String],
+      cancellation: String,
+      validity: String
+    }
   },
   
   // Metadata

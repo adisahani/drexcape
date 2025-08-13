@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 
+// Clear any existing model to avoid conflicts
+if (mongoose.models.Itinerary) {
+  delete mongoose.models.Itinerary;
+}
+
 const itinerarySchema = new mongoose.Schema({
   // Basic itinerary information
   title: {
@@ -46,10 +51,7 @@ const itinerarySchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  travelClass: {
-    type: String,
-    required: true
-  },
+
   
   // Unique identifiers
   slug: {
@@ -89,6 +91,92 @@ const itinerarySchema = new mongoose.Schema({
     default: '/default-travel.jpg'
   },
   
+  // Two-stage generation fields
+  needsDetailedGeneration: {
+    type: Boolean,
+    default: false
+  },
+  packageType: {
+    type: String,
+    enum: ['budget', 'mid-range', 'luxury'],
+    default: 'mid-range'
+  },
+  
+  // Professional package structure
+  summary: String,
+  pricePP: Number,
+  priceBreakdown: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  // Accept any shape for hotel example to avoid validation errors across variants
+  hotelExample: { type: mongoose.Schema.Types.Mixed, default: {} },
+  topAttractions: [String],
+  duration: String,
+  groupSize: String,
+  inclusions: [String],
+  exclusions: [String],
+  
+  // Detailed information (generated on-demand)
+  tripTitle: String,
+  priceSummary: String,
+  transport: {
+    toDestination: String,
+    local: String,
+    pickupDetails: String,
+    dropoffDetails: String
+  },
+  // Detailed data also as flexible Mixed
+  accommodation: { type: mongoose.Schema.Types.Mixed, default: {} },
+  dayPlans: [{
+    day: Number,
+    theme: String,
+    morning: String,
+    afternoon: String,
+    evening: String,
+    meals: String,
+    photoQuery: String,
+    duration: String
+  }],
+  mealCostEstimates: {
+    budget: String,
+    'mid-range': String,
+    luxury: String
+  },
+  whatsIncluded: [String],
+  whatsNotIncluded: [String],
+  cancellationPolicy: String,
+  accessibility: String,
+  languages: String,
+  meetingPoint: String,
+  startTime: String,
+  endTime: String,
+  
+  // Legacy fields for backward compatibility
+  details: String,
+  accommodationDetails: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  transportDetails: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  mealsDetails: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  activitiesDetails: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  termsAndConditions: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+  galleryImageQueries: [String],
+  accommodationImageQuery: String,
+  
   // Timestamps
   createdAt: {
     type: Date,
@@ -104,10 +192,16 @@ const itinerarySchema = new mongoose.Schema({
 itinerarySchema.statics.generateUniqueSlug = async function(baseSlug) {
   let slug = baseSlug;
   let counter = 1;
+  const maxAttempts = 100; // Prevent infinite loops
   
-  while (await this.findOne({ slug })) {
+  while (await this.findOne({ slug }) && counter <= maxAttempts) {
     slug = `${baseSlug}-${counter}`;
     counter++;
+  }
+  
+  // If we've exhausted all attempts, add a timestamp to ensure uniqueness
+  if (counter > maxAttempts) {
+    slug = `${baseSlug}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
   }
   
   return slug;
@@ -116,7 +210,12 @@ itinerarySchema.statics.generateUniqueSlug = async function(baseSlug) {
 // Pre-save hook to generate unique identifiers
 itinerarySchema.pre('save', async function(next) {
   if (!this.slug) {
-    const baseSlug = `${this.fromLocation.toLowerCase().replace(/\s+/g, '-')}-to-${this.toLocation.toLowerCase().replace(/\s+/g, '-')}-${this.travelers}-travelers-${this.travelClass.toLowerCase()}-${this.days}`;
+    // Create a more unique base slug that includes package-specific information
+    const packageIdentifier = this.title ? 
+      this.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : 
+      `package-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    
+    const baseSlug = `${this.fromLocation.toLowerCase().replace(/\s+/g, '-')}-to-${this.toLocation.toLowerCase().replace(/\s+/g, '-')}-${this.travelers}-travelers-${this.days}-${packageIdentifier}`;
     
     // Generate unique slug
     this.slug = await this.constructor.generateUniqueSlug(baseSlug);

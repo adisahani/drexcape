@@ -64,6 +64,9 @@ router.post('/', async (req, res) => {
 // Get itinerary by slug with access control
 router.get('/:slug', async (req, res) => {
   try {
+    console.log('🏠 === Itineraries Router: GET /:slug ===');
+    console.log('📦 slug:', req.params.slug);
+    
     const itinerary = await Itinerary.findOne({ slug: req.params.slug });
     
     if (!itinerary) {

@@ -18,8 +18,22 @@ if (process.env.MONGODB_URI) {
 }
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// Add connection limiting middleware
+app.use((req, res, next) => {
+  // Add a small delay to prevent overwhelming the server
+  setTimeout(next, 10);
+});
+
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Session middleware for user tracking with MongoDB store
 app.use(session({
@@ -154,6 +168,7 @@ app.get('/api/user/access-status', (req, res) => {
 // Import models
 const Itinerary = require('./models/Itinerary');
 const ItineraryDetails = require('./models/ItineraryDetails');
+const SearchHistory = require('./models/SearchHistory');
 
 // Import formatting function
 const { processItineraryDetails } = require('./routes/itineraries');
@@ -163,8 +178,16 @@ const GEMINI_25_FLASH_LITE_API_KEY = process.env.GEMINI_25_FLASH_LITE_API_KEY;
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
 // Fallback itinerary generator function
-const generateFallbackItineraries = (from, to, days, travellers, travelClass) => {
-  const basePrice = 15000; // Base price per person
+const generateFallbackItineraries = (from, to, days, travellers) => {
+  console.log('🔄 Generating fallback itineraries for:', { from, to, days, travellers });
+  
+  // Determine appropriate transportation mode
+  const transportMode = getTransportMode(from, to);
+  const transportModeText = transportMode === 'flight' ? 'flight' : transportMode === 'train' ? 'train' : 'bus';
+  
+  // Adjust base price based on transportation mode
+  const transportBasePrice = transportMode === 'flight' ? 8000 : transportMode === 'train' ? 2000 : 1000;
+  const basePrice = transportBasePrice + 7000; // transport + hotel base
   const pricePerDay = 3000; // Additional cost per day
   const totalPrice = (basePrice + (days - 1) * pricePerDay) * travellers;
   
@@ -172,15 +195,40 @@ const generateFallbackItineraries = (from, to, days, travellers, travelClass) =>
     'Goa': ['Panaji', 'Calangute', 'Anjuna', 'Old Goa'],
     'Mumbai': ['Gateway of India', 'Marine Drive', 'Juhu Beach', 'Elephanta Caves'],
     'Delhi': ['Red Fort', 'Qutub Minar', 'India Gate', 'Humayun\'s Tomb'],
+    'Dubai': ['Burj Khalifa', 'Palm Jumeirah', 'Dubai Mall', 'Dubai Frame'],
     'Agra': ['Taj Mahal', 'Agra Fort', 'Fatehpur Sikri', 'Mehtab Bagh'],
     'Jaipur': ['Amber Fort', 'City Palace', 'Hawa Mahal', 'Jantar Mantar'],
     'Varanasi': ['Ghats', 'Kashi Vishwanath Temple', 'Sarnath', 'Dashashwamedh Ghat'],
     'Kerala': ['Munnar', 'Alleppey', 'Kochi', 'Thekkady'],
-    'Rajasthan': ['Jaipur', 'Udaipur', 'Jodhpur', 'Jaisalmer']
+    'Rajasthan': ['Jaipur', 'Udaipur', 'Jodhpur', 'Jaisalmer'],
+    'Singapore': ['Marina Bay Sands', 'Gardens by the Bay', 'Sentosa Island', 'Universal Studios'],
+    'Thailand': ['Grand Palace', 'Wat Phra Kaew', 'Chatuchak Market', 'Khao San Road'],
+    'Maldives': ['Male', 'Maafushi', 'Hulhumale', 'Artificial Beach'],
+    'Sri Lanka': ['Sigiriya', 'Temple of the Tooth', 'Galle Fort', 'Ella'],
+    'Nepal': ['Kathmandu Durbar Square', 'Pashupatinath Temple', 'Boudhanath Stupa', 'Swayambhunath'],
+    'Bhutan': ['Tiger\'s Nest', 'Punakha Dzong', 'Thimphu', 'Paro Valley']
   };
   
-  const destinations = commonDestinations[to] || [to];
-  const places = destinations.slice(0, Math.min(days, destinations.length));
+  // Find the best matching destination (case-insensitive)
+  const toLower = to.toLowerCase();
+  let destinations = [to];
+  let places = [to];
+  
+  // Try to find a matching destination
+  for (const [dest, placesList] of Object.entries(commonDestinations)) {
+    if (dest.toLowerCase() === toLower || dest.toLowerCase().includes(toLower) || toLower.includes(dest.toLowerCase())) {
+      destinations = [dest];
+      places = placesList.slice(0, Math.min(days, placesList.length));
+      break;
+    }
+  }
+  
+  // If no match found, use the original destination
+  if (destinations[0] === to && places[0] === to) {
+    places = [to, `${to} City Center`, `${to} Main Attractions`].slice(0, Math.min(days, 3));
+  }
+  
+  console.log('📍 Selected destinations and places:', { destinations, places });
   
   const packages = [
     {
@@ -190,7 +238,7 @@ const generateFallbackItineraries = (from, to, days, travellers, travelClass) =>
       placesToVisit: places,
       highlights: ['Guided tours', 'Local experiences', 'Cultural immersion'],
       price: totalPrice,
-      details: `**${days}-Day Adventure in ${to}**\\n\\nExperience the best of ${to} with guided tours, local experiences, and cultural immersion.\\n\\n🏨 *Accommodation:* ${days}-night stay in comfortable hotels\\n✈️ *Transport:* Flights and local transfers included\\n🍽️ *Meals:* Daily breakfast and some meals included\\n📌 *Terms:* Prices inclusive of taxes, subject to availability`
+      details: `**Day 1: Arrival & Introduction**\\nMorning: • Arrive at ${to} ${transportMode === 'flight' ? 'Airport' : transportMode === 'train' ? 'Railway Station' : 'Bus Terminal'}, transfer to hotel.\\n• Check-in and freshen up.\\n\\nAfternoon: • Lunch at local restaurant.\\n• Orientation tour of ${to}.\\n\\nEvening: • Welcome dinner at hotel.\\n• Rest and prepare for next day.\\n\\n**Day 2: Cultural Exploration**\\nMorning: • Breakfast at hotel.\\n• Visit ${places[0] || 'main attraction'}.\\n\\nAfternoon: • Lunch at local eatery.\\n• Explore ${places[1] || 'cultural sites'}.\\n\\nEvening: • Dinner at traditional restaurant.\\n• Cultural performance (if available).\\n\\n**Day 3: Adventure & Departure**\\nMorning: • Breakfast at hotel.\\n• Visit ${places[2] || 'remaining attractions'}.\\n\\nAfternoon: • Lunch at local restaurant.\\n• Transfer to ${transportMode === 'flight' ? 'airport' : transportMode === 'train' ? 'railway station' : 'bus terminal'} for departure.\\n\\nAccommodation\\n${days}-night stay in comfortable hotels\\n\\nTransport Details\\n${transportModeText.charAt(0).toUpperCase() + transportModeText.slice(1)}s and local transfers included\\n\\nActivities Included\\nGuided tours, local experiences, cultural immersion\\n\\nMeals\\nDaily breakfast and some meals included\\n\\nTerms\\nPrices inclusive of taxes, subject to availability`
     },
     {
       packageName: `${to} Luxury Escape`,
@@ -199,7 +247,7 @@ const generateFallbackItineraries = (from, to, days, travellers, travelClass) =>
       placesToVisit: places,
       highlights: ['Premium accommodation', 'Exclusive experiences', 'Personal guide'],
       price: Math.round(totalPrice * 1.5),
-      details: `**${days}-Day Luxury Escape to ${to}**\\n\\nIndulge in premium accommodation and exclusive experiences with personal guides.\\n\\n🏨 *Accommodation:* ${days}-night stay in luxury hotels\\n✈️ *Transport:* Premium flights and private transfers\\n🍽️ *Meals:* All meals included at fine restaurants\\n📌 *Terms:* Premium package with exclusive access`
+      details: `**Day 1: Luxury Arrival**\\nMorning: • Private ${transportMode} transfer to luxury hotel.\\n• Champagne welcome and check-in.\\n\\nAfternoon: • Gourmet lunch at hotel restaurant.\\n• Private city tour with expert guide.\\n\\nEvening: • Fine dining experience.\\n• Luxury spa treatment.\\n\\n**Day 2: Exclusive Experiences**\\nMorning: • Premium breakfast in room.\\n• Private access to ${places[0] || 'exclusive sites'}.\\n\\nAfternoon: • Michelin-starred lunch.\\n• Exclusive ${places[1] || 'cultural experience'}.\\n\\nEvening: • Private dinner with local chef.\\n• Luxury accommodation.\\n\\n**Day 3: Premium Departure**\\nMorning: • Luxury breakfast.\\n• Final exclusive experience.\\n\\nAfternoon: • Premium lunch.\\n• Private transfer to ${transportMode === 'flight' ? 'airport' : transportMode === 'train' ? 'railway station' : 'bus terminal'}.\\n\\nAccommodation\\n${days}-night stay in luxury hotels\\n\\nTransport Details\\nPremium ${transportModeText}s and private transfers\\n\\nActivities Included\\nExclusive experiences, personal guides\\n\\nMeals\\nAll meals included at fine restaurants\\n\\nTerms\\nPremium package with exclusive access`
     },
     {
       packageName: `${to} Budget Explorer`,
@@ -208,7 +256,7 @@ const generateFallbackItineraries = (from, to, days, travellers, travelClass) =>
       placesToVisit: places,
       highlights: ['Affordable stays', 'Local transport', 'Authentic experiences'],
       price: Math.round(totalPrice * 0.7),
-      details: `**${days}-Day Budget Explorer in ${to}**\\n\\nDiscover ${to} on a budget with authentic local experiences and affordable accommodation.\\n\\n🏨 *Accommodation:* ${days}-night stay in budget hotels\\n✈️ *Transport:* Economy flights and local transport\\n🍽️ *Meals:* Some meals included, local dining options\\n📌 *Terms:* Budget-friendly package with great value`
+      details: `**Day 1: Budget Arrival**\\nMorning: • Arrive at ${to} ${transportMode === 'flight' ? 'Airport' : transportMode === 'train' ? 'Railway Station' : 'Bus Terminal'}, take local transport to hotel.\\n• Check-in at budget hotel.\\n\\nAfternoon: • Local lunch at street food stall.\\n• Self-guided walking tour of ${to}.\\n\\nEvening: • Budget dinner at local restaurant.\\n• Explore local markets.\\n\\n**Day 2: Affordable Exploration**\\nMorning: • Budget breakfast at hotel.\\n• Visit ${places[0] || 'main attraction'} using local transport.\\n\\nAfternoon: • Local lunch at popular eatery.\\n• Explore ${places[1] || 'cultural sites'} independently.\\n\\nEvening: • Street food dinner.\\n• Free time for local experiences.\\n\\n**Day 3: Budget Departure**\\nMorning: • Simple breakfast.\\n• Final budget-friendly activities.\\n\\nAfternoon: • Local lunch.\\n• Take local transport to ${transportMode === 'flight' ? 'airport' : transportMode === 'train' ? 'railway station' : 'bus terminal'}.\\n\\nAccommodation\\n${days}-night stay in budget hotels\\n\\nTransport Details\\nEconomy ${transportModeText}s and local transport\\n\\nActivities Included\\nSelf-guided tours, local experiences\\n\\nMeals\\nSome meals included, local dining options\\n\\nTerms\\nBudget-friendly package with great value`
     },
     {
       packageName: `${to} Cultural Heritage`,
@@ -217,7 +265,7 @@ const generateFallbackItineraries = (from, to, days, travellers, travelClass) =>
       placesToVisit: places,
       highlights: ['Heritage sites', 'Cultural tours', 'Traditional experiences'],
       price: Math.round(totalPrice * 1.2),
-      details: `**${days}-Day Cultural Heritage Tour of ${to}**\\n\\nImmerse yourself in the rich cultural heritage of ${to} with guided heritage tours.\\n\\n🏨 *Accommodation:* ${days}-night stay in heritage properties\\n✈️ *Transport:* Comfortable flights and guided tours\\n🍽️ *Meals:* Traditional meals and cultural dining experiences\\n📌 *Terms:* Heritage-focused package with cultural insights`
+      details: `**Day 1: Heritage Arrival**\\nMorning: • Arrive at ${to} ${transportMode === 'flight' ? 'Airport' : transportMode === 'train' ? 'Railway Station' : 'Bus Terminal'}, transfer to heritage hotel.\\n• Traditional welcome ceremony.\\n\\nAfternoon: • Heritage lunch at traditional restaurant.\\n• Guided tour of ${places[0] || 'heritage sites'}.\\n\\nEvening: • Cultural dinner with traditional music.\\n• Heritage storytelling session.\\n\\n**Day 2: Cultural Immersion**\\nMorning: • Traditional breakfast at heritage property.\\n• Visit ${places[1] || 'cultural landmarks'} with expert guide.\\n\\nAfternoon: • Traditional lunch at local family home.\\n• Cultural workshop (crafts/music/dance).\\n\\nEvening: • Heritage dinner with local family.\\n• Traditional cultural performance.\\n\\n**Day 3: Heritage Departure**\\nMorning: • Traditional breakfast.\\n• Final heritage site visit.\\n\\nAfternoon: • Farewell traditional lunch.\\n• Transfer to ${transportMode === 'flight' ? 'airport' : transportMode === 'train' ? 'railway station' : 'bus terminal'} with cultural insights.\\n\\nAccommodation\\n${days}-night stay in heritage properties\\n\\nTransport Details\\nComfortable ${transportModeText}s and guided tours\\n\\nActivities Included\\nHeritage tours, cultural experiences\\n\\nMeals\\nTraditional meals and cultural dining experiences\\n\\nTerms\\nHeritage-focused package with cultural insights`
     },
     {
       packageName: `${to} Nature & Wildlife`,
@@ -226,7 +274,7 @@ const generateFallbackItineraries = (from, to, days, travellers, travelClass) =>
       placesToVisit: places,
       highlights: ['Nature trails', 'Wildlife spotting', 'Eco-friendly stays'],
       price: Math.round(totalPrice * 1.1),
-      details: `**${days}-Day Nature & Wildlife Adventure in ${to}**\\n\\nExplore the natural beauty and wildlife of ${to} with eco-friendly experiences.\\n\\n🏨 *Accommodation:* ${days}-night stay in eco-resorts\\n✈️ *Transport:* Nature-friendly transport options\\n🍽️ *Meals:* Organic and local cuisine included\\n📌 *Terms:* Eco-friendly package with nature conservation focus`
+      details: `**Day 1: Nature Arrival**\\nMorning: • Arrive at ${to} ${transportMode === 'flight' ? 'Airport' : transportMode === 'train' ? 'Railway Station' : 'Bus Terminal'}, eco-friendly transfer to resort.\\n• Nature orientation and safety briefing.\\n\\nAfternoon: • Organic lunch at eco-resort.\\n• Guided nature trail in ${places[0] || 'natural surroundings'}.\\n\\nEvening: • Sustainable dinner at resort.\\n• Stargazing and nature sounds.\\n\\n**Day 2: Wildlife & Adventure**\\nMorning: • Organic breakfast at resort.\\n• Wildlife spotting at ${places[1] || 'wildlife sanctuary'}.\\n\\nAfternoon: • Local organic lunch.\\n• Adventure activities (trekking/bird watching).\\n\\nEvening: • Eco-friendly dinner.\\n• Campfire with nature stories.\\n\\n**Day 3: Nature Departure**\\nMorning: • Sunrise nature walk.\\n• Organic breakfast.\\n\\nAfternoon: • Final eco-friendly activities.\\n• Sustainable transfer to ${transportMode === 'flight' ? 'airport' : transportMode === 'train' ? 'railway station' : 'bus terminal'}.\\n\\nAccommodation\\n${days}-night stay in eco-resorts\\n\\nTransport Details\\nNature-friendly ${transportModeText}s and eco-transport\\n\\nActivities Included\\nWildlife tours, nature trails, eco-activities\\n\\nMeals\\nOrganic and local cuisine included\\n\\nTerms\\nEco-friendly package with nature conservation focus`
     }
   ];
   
@@ -238,9 +286,10 @@ const ImageService = require('./services/imageService');
 
 // Generate and save basic itineraries
 app.post('/api/generate-itinerary', trackAIUsage('generate-itinerary'), async (req, res) => {
-  const { from, to, departureDate, returnDate, travellers, travelClass } = req.body;
+      const { from, to, departureDate, returnDate, travellers, priceRange } = req.body;
   
   console.log('Received dates:', { departureDate, returnDate });
+  console.log('Received priceRange:', priceRange);
   
   const startTime = Date.now();
 
@@ -255,63 +304,185 @@ app.post('/api/generate-itinerary', trackAIUsage('generate-itinerary'), async (r
   
   const days = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 
-  // Enhanced userPrompt with image search requirements
-  const userPrompt = `You are an experienced travel agent. Create 5 complete, practical travel itinerary packages for a ${days}-day trip from ${from} to ${to} for ${travellers} ${travelClass} travelers.
+  // Determine appropriate transportation mode
+  const transportMode = getTransportMode(from, to);
+  const transportModeText = transportMode === 'flight' ? 'flight' : transportMode === 'train' ? 'train' : 'bus';
+  const transportCostRange = transportMode === 'flight' ? '₹8k-12k pp (budget), ₹15k-20k pp (luxury)' : 
+                            transportMode === 'train' ? '₹1k-2k pp (budget), ₹3k-5k pp (luxury)' : 
+                            '₹500-1k pp (budget), ₹1.5k-2.5k pp (luxury)';
 
-Each package price must be realistic and based on the following assumptions:
-- Domestic return flight: INR 10,000–15,000 per person.
-- Hotel stay: INR 5,000 per night for budget, INR 10,000 per night for luxury.
-- Meals and activities: Add INR 2,000–5,000 per day per person.
-The total price should match these estimates for the total days and travelers.
+  // Stage 1: Professional package generation (web-optimized)
+  const basicPrompt = `As a professional travel planner, create 3 package options (budget/mid-range/luxury) for ${days}-day ${to} trip from ${from} for ${travellers} travelers.
 
-**Your format must include for each package:**
-1️⃣ **Day-wise plan:** Each day with clear heading + bullet points for activities (Morning/Afternoon/Evening if needed).
-2️⃣ **Accommodation:** Mention suggested hotel/resort for each night.
-3️⃣ **Activities Included:** Mention if sightseeing tickets, guides, cruises, or adventure sports are covered.
-4️⃣ **Transport Details:** Include arrival & departure flights or local transport if needed.
-5️⃣ **Meals:** Breakfast/Lunch/Dinner info if included or recommended.
-6️⃣ **Terms:** One short line about price inclusions/exclusions or taxes.
-7️⃣ **Contact/Booking Link:** Add a clear call to action.
+**Transportation Mode:** ${transportModeText.toUpperCase()} (recommended for this route)
+**Expected Price Guidelines (estimates only):**
+- ${transportModeText.charAt(0).toUpperCase() + transportModeText.slice(1)}s: ${transportCostRange}
+- Hotels: ₹1.5k-3k/night (budget), ₹7k-10k/night (luxury)
+- Daily Expenses: ₹1k-1.5k pp (budget), ₹3k-5k pp (luxury)
 
-**For each package, provide these exact image search fields:**
-1. "headerImageQuery": "scenic wide-angle view of [main destination]"
-2. "galleryImageQueries": [
-   "specific landmark from itinerary",
-   "cultural activity from itinerary", 
-   "unique experience from itinerary"
-]
-3. "accommodationImageQuery": "[hotel type] in [location]"
-
-Return a JSON array of 5 packages. Each package object must have these exact fields:
-- packageName (string, catchy title)
-- days (number)
-- destinations (array of strings)
-- placesToVisit (array of strings, main attractions)
-- highlights (array of strings, 2-4 key highlights)
-- price (number, in INR)
-- details (string, full day-wise itinerary with accommodation, transport, meals, terms, booking info)
-- headerImageQuery (string, for image search)
-- galleryImageQueries (array of strings, for gallery images)
-- accommodationImageQuery (string, for accommodation image)
-
-**Format Example for each package:**
+**Return Strict JSON:**
+[
 {
-  "packageName": "Romantic Honeymoon Package",
-  "days": 3,
-  "destinations": ["Goa"],
-  "placesToVisit": ["Butterfly Beach", "Old Goa Churches", "Mandovi River"],
-  "highlights": ["Sunset cruise", "Private beach access", "Couples spa"],
-  "price": 25000,
-  "headerImageQuery": "scenic wide-angle view of Goa beaches",
-  "galleryImageQueries": ["Butterfly Beach Goa", "Old Goa Churches", "Mandovi River sunset"],
-  "accommodationImageQuery": "luxury resort in Goa",
-  "details": "**Day 1: Arrival & Sunset**\\n- Arrive at Goa Airport, private transfer to Beach Resort.\\n- Sunset cruise on Mandovi River.\\n- Candlelight dinner at beach shack.\\n\\n🏨 *Accommodation:* 1-night stay at Beach Resort, Deluxe Room, Breakfast Included.\\n\\n**Day 2: Private Beaches & Spa**\\n- Relaxing breakfast.\\n- Visit secluded Butterfly Beach by private boat.\\n- Couples Spa session at resort.\\n- Dinner at beach shack.\\n\\n🏨 *Accommodation:* 1-night stay at Beach Resort, Deluxe Room.\\n\\n**Day 3: Heritage & Departure**\\n- Visit Old Goa Churches: Basilica of Bom Jesus.\\n- Transfer to Goa Airport for return flight.\\n\\n✅ *Activities Included:* Sunset cruise, Butterfly Beach boat ride, spa session.\\n✈️ *Transport:* Private airport transfers, local sightseeing by car.\\n🍽️ *Meals:* Daily breakfast, 1 candlelight dinner included.\\n📌 *Terms:* Prices inclusive of GST, subject to availability.\\n📞 *Contact us to book now!*"
-}
+  "packageName": "string - catchy title",
+    "packageType": "budget/mid-range/luxury",
+    "summary": "40-char teaser description",
+    "pricePP": number,
+    "priceBreakdown": {
+      "${transportModeText}s": number,
+      "hotel": number,
+      "meals": number,
+      "activities": number
+    },
+    "hotelExample": {
+      "name": "string (real hotel name)",
+      "type": "3-star/4-star/5-star",
+      "location": "string (specific area)"
+    },
+    "topAttractions": ["max 3 specific attractions"],
+    "coverImageQuery": "scenic ${to} location",
+    "duration": "${days} days, ${days-1} nights",
+    "groupSize": "max ${travellers} travelers",
+    "inclusions": ["array of 3-4 key inclusions"],
+    "exclusions": ["array of 2-3 key exclusions"]
+  }
+]
 
-Return ONLY valid JSON array. Do not include any explanation, comments, or markdown code blocks. All property names and strings must use double quotes.`;
+Return ONLY valid JSON array. No explanations.`;
 
-// Helper to fetch a unique header image for itineraries within one request
-  const usedHeaderImages = new Set();
+// ===== COMPLETE AI PROMPT LOGGING =====
+console.log('\n🤖 ===== STAGE 1: BASIC PACKAGES PROMPT =====');
+console.log('📝 PROMPT LENGTH:', basicPrompt.length, 'characters');
+console.log('📝 PROMPT CONTENT:');
+console.log('='.repeat(80));
+console.log(basicPrompt);
+console.log('='.repeat(80));
+console.log('🤖 ===== END OF BASIC PROMPT =====\n');
+
+
+
+// Helper to determine appropriate transportation mode based on route
+function getTransportMode(from, to) {
+    const fromLower = from.toLowerCase();
+    const toLower = to.toLowerCase();
+    
+    // Define route categories
+    const shortDistanceRoutes = [
+      ['delhi', 'agra'], ['delhi', 'jaipur'], ['delhi', 'mathura'], ['delhi', 'varanasi'],
+      ['mumbai', 'pune'], ['mumbai', 'nashik'], ['mumbai', 'aurangabad'],
+      ['bangalore', 'mysore'], ['bangalore', 'chennai'], ['bangalore', 'hyderabad'],
+      ['kolkata', 'darjeeling'], ['kolkata', 'varanasi'], ['kolkata', 'bhubaneswar'],
+      ['chennai', 'pondicherry'], ['chennai', 'madurai'], ['chennai', 'trichy'],
+      ['hyderabad', 'warangal'], ['hyderabad', 'vijayawada'],
+      ['pune', 'mahabaleshwar'], ['pune', 'lonavala'], ['pune', 'khandala'],
+      ['ahmedabad', 'vadodara'], ['ahmedabad', 'surat'],
+      ['jaipur', 'udaipur'], ['jaipur', 'jodhpur'], ['jaipur', 'ajmer']
+    ];
+    
+    const mediumDistanceRoutes = [
+      ['delhi', 'mumbai'], ['delhi', 'bangalore'], ['delhi', 'kolkata'], ['delhi', 'chennai'],
+      ['mumbai', 'bangalore'], ['mumbai', 'kolkata'], ['mumbai', 'chennai'],
+      ['bangalore', 'kolkata'], ['bangalore', 'delhi'], ['bangalore', 'mumbai'],
+      ['kolkata', 'mumbai'], ['kolkata', 'bangalore'], ['kolkata', 'delhi'],
+      ['chennai', 'bangalore'], ['chennai', 'mumbai'], ['chennai', 'delhi']
+    ];
+    
+    const longDistanceRoutes = [
+      ['delhi', 'goa'], ['mumbai', 'goa'], ['bangalore', 'goa'], ['chennai', 'goa'],
+      ['delhi', 'kerala'], ['mumbai', 'kerala'], ['bangalore', 'kerala'],
+      ['delhi', 'srinagar'], ['mumbai', 'srinagar'], ['delhi', 'leh'],
+      ['delhi', 'shimla'], ['mumbai', 'shimla'], ['delhi', 'manali']
+    ];
+    
+    const internationalRoutes = [
+      ['delhi', 'singapore'], ['mumbai', 'singapore'], ['bangalore', 'singapore'], ['chennai', 'singapore'],
+      ['delhi', 'bangkok'], ['mumbai', 'bangkok'], ['bangalore', 'bangkok'], ['chennai', 'bangkok'],
+      ['delhi', 'dubai'], ['mumbai', 'dubai'], ['bangalore', 'dubai'], ['chennai', 'dubai'],
+      ['delhi', 'london'], ['mumbai', 'london'], ['bangalore', 'london'], ['chennai', 'london'],
+      ['delhi', 'new york'], ['mumbai', 'new york'], ['bangalore', 'new york'], ['chennai', 'new york'],
+      ['delhi', 'tokyo'], ['mumbai', 'tokyo'], ['bangalore', 'tokyo'], ['chennai', 'tokyo'],
+      ['delhi', 'sydney'], ['mumbai', 'sydney'], ['bangalore', 'sydney'], ['chennai', 'sydney'],
+      ['delhi', 'paris'], ['mumbai', 'paris'], ['bangalore', 'paris'], ['chennai', 'paris'],
+      ['delhi', 'hong kong'], ['mumbai', 'hong kong'], ['bangalore', 'hong kong'], ['chennai', 'hong kong'],
+      ['delhi', 'kuala lumpur'], ['mumbai', 'kuala lumpur'], ['bangalore', 'kuala lumpur'], ['chennai', 'kuala lumpur'],
+      ['delhi', 'bali'], ['mumbai', 'bali'], ['bangalore', 'bali'], ['chennai', 'bali']
+    ];
+    
+    // Check if route matches any predefined categories
+    for (const route of shortDistanceRoutes) {
+      if ((route[0] === fromLower && route[1] === toLower) || 
+          (route[0] === toLower && route[1] === fromLower)) {
+        return 'bus';
+      }
+    }
+    
+    for (const route of mediumDistanceRoutes) {
+      if ((route[0] === fromLower && route[1] === toLower) || 
+          (route[0] === toLower && route[1] === fromLower)) {
+        return 'train';
+      }
+    }
+    
+    for (const route of longDistanceRoutes) {
+      if ((route[0] === fromLower && route[1] === toLower) || 
+          (route[0] === toLower && route[1] === fromLower)) {
+        return 'flight';
+      }
+    }
+    
+    for (const route of internationalRoutes) {
+      if ((route[0] === fromLower && route[1] === toLower) || 
+          (route[0] === toLower && route[1] === fromLower)) {
+        return 'flight';
+      }
+    }
+    
+    // Default logic based on common patterns
+    if (fromLower.includes('delhi') || toLower.includes('delhi')) {
+      if (toLower.includes('goa') || toLower.includes('kerala') || toLower.includes('srinagar') || 
+          toLower.includes('leh') || toLower.includes('shimla') || toLower.includes('manali')) {
+        return 'flight';
+      } else if (toLower.includes('agra') || toLower.includes('jaipur') || toLower.includes('mathura')) {
+        return 'bus';
+      } else {
+        return 'train';
+      }
+    }
+    
+    if (fromLower.includes('mumbai') || toLower.includes('mumbai')) {
+      if (toLower.includes('goa') || toLower.includes('kerala')) {
+        return 'flight';
+      } else if (toLower.includes('pune') || toLower.includes('nashik')) {
+        return 'bus';
+      } else {
+        return 'train';
+      }
+    }
+    
+    if (fromLower.includes('bangalore') || toLower.includes('bangalore')) {
+      if (toLower.includes('goa') || toLower.includes('kerala')) {
+        return 'flight';
+      } else if (toLower.includes('mysore')) {
+        return 'bus';
+      } else {
+        return 'train';
+      }
+    }
+    
+    // General fallback based on distance estimation
+    const distanceKeywords = ['goa', 'kerala', 'srinagar', 'leh', 'shimla', 'manali', 'darjeeling'];
+    const internationalKeywords = ['singapore', 'bangkok', 'dubai', 'london', 'new york', 'tokyo', 'sydney', 'paris', 'hong kong', 'kuala lumpur', 'bali', 'thailand', 'malaysia', 'indonesia', 'australia', 'uk', 'usa', 'japan', 'france'];
+    
+    if (distanceKeywords.some(keyword => fromLower.includes(keyword) || toLower.includes(keyword))) {
+      return 'flight';
+    }
+    
+    if (internationalKeywords.some(keyword => fromLower.includes(keyword) || toLower.includes(keyword))) {
+      return 'flight';
+    }
+    
+    // Default to train for most routes
+    return 'train';
+  }
 
   // Helper to generate a hash code for strings
   function hashCode(str) {
@@ -350,7 +521,7 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
       Return only a JSON array of 5 search terms, no other text:
       ["search term 1", "search term 2", "search term 3", "search term 4", "search term 5"]`;
 
-      const response = await axios.post(
+    const response = await axios.post(
         'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent',
         {
           contents: [{ role: 'user', parts: [{ text: prompt }] }]
@@ -390,93 +561,7 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
     return fallbackTerms;
   }
 
-  async function fetchUniqueHeaderImage(place, destination, requestId, highlights = []) {
-    try {
-      // Generate a unique seed based on requestId + place/destination combination
-      const seed = requestId ? 
-        hashCode(`${requestId}-${place}-${destination}`) : 
-        Math.floor(Math.random() * 10000);
-      
-      // Generate AI-powered search terms using highlights
-      const aiSearchTerms = await generateImageSearchTerms(place, destination, highlights);
-      console.log(`🔍 AI search terms for ${place || destination}:`, aiSearchTerms);
-      
-      // 1. Try destination-gallery endpoint first for multiple images
-      const galleryRes = await axios.get(`http://localhost:${process.env.PORT || 3001}/api/destination-gallery`, {
-        params: {
-          destinations: JSON.stringify([destination]),
-          placesToVisit: JSON.stringify([place]),
-          highlights: JSON.stringify(highlights),
-          aiSearchTerms: JSON.stringify(aiSearchTerms),
-          requestId: requestId,
-          seed: seed
-        },
-        timeout: 10000
-      });
-      
-      if (galleryRes.data?.images?.length) {
-        // Get a random image from the gallery using the seed
-        const randomIndex = seed % galleryRes.data.images.length;
-        const selectedImage = galleryRes.data.images[randomIndex];
-        
-        if (selectedImage && !usedHeaderImages.has(selectedImage.url)) {
-          usedHeaderImages.add(selectedImage.url);
-          console.log(`✅ Using gallery image ${randomIndex + 1}/${galleryRes.data.images.length} for ${place || destination}`);
-          return selectedImage.url;
-        }
-        
-        // If the selected image was used, try others in a random order
-        const shuffledIndices = Array.from(
-          { length: galleryRes.data.images.length }, 
-          (_, i) => i
-        ).sort(() => (seed * (i + 1)) % 2 - 0.5);
-        
-        for (const idx of shuffledIndices) {
-          const img = galleryRes.data.images[idx];
-          if (!usedHeaderImages.has(img.url)) {
-            usedHeaderImages.add(img.url);
-            console.log(`✅ Using alternative gallery image ${idx + 1}/${galleryRes.data.images.length} for ${place || destination}`);
-            return img.url;
-          }
-        }
-      }
-      
-      // 2. Fallback to single place-image endpoint with different search variations
-      const searchVariations = [
-        { place, destination },
-        { place: `${place} landmark`, destination },
-        { place: `${place} attraction`, destination },
-        { place: destination, destination: place },
-        { place: `${destination} famous`, destination: place }
-      ];
-      
-      // Try each variation in a random order based on seed
-      const shuffledVariations = searchVariations.sort(() => (seed * 31) % 2 - 0.5);
-      
-      for (const params of shuffledVariations) {
-        try {
-          const single = await axios.get(`http://localhost:${process.env.PORT || 3001}/api/place-image`, {
-            params: { ...params, requestId, seed },
-            timeout: 10000
-          });
-          
-          if (single.data?.imageUrl && !usedHeaderImages.has(single.data.imageUrl)) {
-            usedHeaderImages.add(single.data.imageUrl);
-            console.log(`✅ Using unique place-image for ${params.place}`);
-            return single.data.imageUrl;
-          }
-        } catch (variationError) {
-          console.log(`⚠️ Variation failed for ${params.place}:`, variationError.message);
-          continue;
-        }
-      }
-    } catch (e) {
-      console.log('❌ Image fetch failed:', e.message);
-    }
-    
-    // 3. Return null to signal default
-    return null;
-  }
+
 
   try {
     // Check if API key is configured
@@ -486,17 +571,40 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
     }
 
     console.log('🤖 Calling Gemini API for itinerary generation...');
-    console.log('📝 Request parameters:', { from, to, departureDate, returnDate, travellers, travelClass, days });
+    
+    // ===== REQUEST PARAMETERS LOGGING =====
+    console.log('\n🤖 ===== REQUEST PARAMETERS =====');
+    console.log('📝 PARAMETERS:');
+    console.log('='.repeat(80));
+    console.log(JSON.stringify({
+      from,
+      to,
+      departureDate,
+      returnDate,
+      travellers,
+      days,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    }, null, 2));
+    console.log('='.repeat(80));
+    console.log('🤖 ===== END OF REQUEST PARAMETERS =====\n');
     
     let response;
     try {
+      // ===== API REQUEST LOGGING =====
+      console.log('\n🤖 ===== API REQUEST DETAILS =====');
+      console.log('🌐 API URL:', GEMINI_API_URL);
+      console.log('🔑 API Key configured:', !!GEMINI_25_FLASH_LITE_API_KEY);
+      console.log('⏱️ Timeout:', '60000ms (60 seconds)');
+      console.log('🤖 ===== END OF API REQUEST DETAILS =====\n');
+      
       response = await axios.post(
       GEMINI_API_URL,
       {
         contents: [
           {
             role: 'user',
-            parts: [{ text: userPrompt }]
+            parts: [{ text: basicPrompt }]
           }
         ]
       },
@@ -518,7 +626,7 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
         console.log('🔄 Gemini API is overloaded, using fallback itineraries...');
         
         // Generate fallback itineraries using predefined templates
-        const fallbackItineraries = generateFallbackItineraries(from, to, days, travellers, travelClass);
+        const fallbackItineraries = generateFallbackItineraries(from, to, days, travellers);
         
         // Save fallback itineraries to database
         const savedItineraries = [];
@@ -544,6 +652,14 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
           // Use default images only - no additional API calls to save costs
         }
 
+            console.log('💾 Creating itinerary with data:', {
+              title: pkg.packageName,
+              destinations: pkg.destinations,
+              placesToVisit: pkg.placesToVisit,
+              fromLocation: from,
+              toLocation: to
+            });
+            
             const itinerary = new Itinerary({
               title: pkg.packageName,
               days: pkg.days,
@@ -556,18 +672,17 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
               departureDate: new Date(departureDate),
               returnDate: new Date(returnDate),
               travelers: travellers,
-              travelClass: travelClass,
               headerImage: images.header,
               galleryImages: images.gallery,
               accommodationImage: images.accommodation
             });
             
-            console.log(`💾 Saving fallback itinerary to database: ${pkg.packageName}`);
+            // console.log(`💾 Saving fallback itinerary to database: ${pkg.packageName}`);
             await itinerary.save();
-            console.log(`✅ Fallback itinerary saved successfully: ${pkg.packageName}`);
+            // console.log(`✅ Fallback itinerary saved successfully: ${pkg.packageName}`);
             
             savedItineraries.push({
-              id: itinerary._id,
+              id: itinerary._id.toString(),
               slug: itinerary.slug,
               itineraryId: itinerary.itineraryId,
               headerImage: images.header,
@@ -577,28 +692,50 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
             });
           } catch (saveError) {
             console.error('❌ Error saving fallback itinerary:', saveError);
-            const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            
+            // If it's a duplicate key error, try to save with a unique identifier
+            if (saveError.code === 11000 && saveError.keyPattern && saveError.keyPattern.slug) {
+              console.log('🔄 Duplicate slug detected in fallback, retrying with unique identifier...');
+              try {
+                // Add a unique timestamp to the title to ensure unique slug
+                const uniqueTitle = `${pkg.packageName}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+                const retryItinerary = new Itinerary({
+                  ...itinerary.toObject(),
+                  title: uniqueTitle,
+                  slug: undefined // Force regeneration of slug
+                });
+                
+                await retryItinerary.save();
+                console.log(`✅ Fallback retry successful with unique title: ${uniqueTitle}`);
+                
             savedItineraries.push({
-              id: tempId,
-              slug: `temp-slug-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-              itineraryId: `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-              headerImage: '/default-travel.jpg',
-              galleryImages: ['/default-travel.jpg', '/default-travel.jpg', '/default-travel.jpg'],
-              accommodationImage: '/default-travel.jpg',
+                  id: retryItinerary._id.toString(),
+                  slug: retryItinerary.slug,
+                  itineraryId: retryItinerary.itineraryId,
+                  headerImage: images.header,
+                  galleryImages: images.gallery,
+                  accommodationImage: images.accommodation,
               ...pkg
             });
+                continue; // Skip the fallback below
+              } catch (retryError) {
+                console.error('❌ Fallback retry also failed:', retryError.message);
+              }
+            }
+            
+            console.log('⚠️ Skipping fallback itinerary due to save failure. Not returning a temporary ID.');
           }
         }
         
         const processingTime = Date.now() - startTime;
         await req.trackSearch(
-          { from, to, departureDate, returnDate, travellers, travelClass },
+          { from, to, departureDate, returnDate, travellers, priceRange },
           processingTime,
           savedItineraries.length
         );
         
-        console.log(`🎉 Successfully processed ${savedItineraries.length} fallback itineraries`);
-        console.log(`⏱️ Total processing time: ${processingTime}ms`);
+        // console.log(`🎉 Successfully processed ${savedItineraries.length} fallback itineraries`);
+        // console.log(`⏱️ Total processing time: ${processingTime}ms`);
         
         return res.json({ 
           itineraries: savedItineraries,
@@ -614,6 +751,16 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
     console.log('📊 Response status:', response.status);
     
     let content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    // ===== STAGE 1 AI RESPONSE LOGGING =====
+    console.log('\n🤖 ===== STAGE 1: BASIC PACKAGES RESPONSE =====');
+    console.log('📄 RESPONSE LENGTH:', content.length, 'characters');
+    console.log('📄 RESPONSE CONTENT:');
+    console.log('='.repeat(80));
+    console.log(content);
+    console.log('='.repeat(80));
+    console.log('🤖 ===== END OF BASIC RESPONSE =====\n');
+    
     console.log('📄 Raw content length:', content.length);
     console.log('📄 Content preview:', content.substring(0, 200) + '...');
     
@@ -629,103 +776,169 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
       json = JSON.parse(jsonString);
       console.log('✅ JSON parsed successfully');
       console.log('📦 Number of itineraries:', Array.isArray(json) ? json.length : 'Not an array');
+      
+      // ===== PARSED BASIC PACKAGES LOGGING =====
+      console.log('\n🤖 ===== PARSED BASIC PACKAGES =====');
+      console.log('📦 JSON STRUCTURE:');
+      console.log('='.repeat(80));
+      console.log(JSON.stringify(json, null, 2));
+      console.log('='.repeat(80));
+      console.log('🤖 ===== END OF BASIC PACKAGES =====\n');
+      
     } catch (parseError) {
       console.error('❌ JSON parsing failed:', parseError.message);
       console.error('❌ JSON string:', jsonString);
       return res.status(500).json({ error: 'Failed to parse AI response. Please try again.' });
     }
 
-    // Save each itinerary to database
+    // Process basic packages (Stage 1)
     const savedItineraries = [];
-    console.log('💾 Starting to save itineraries to database...');
+    console.log('💾 Processing basic packages...');
     
     for (let i = 0; i < json.length; i++) {
       const pkg = json[i];
-      console.log(`📦 Processing itinerary ${i + 1}/${json.length}: ${pkg.packageName}`);
+      console.log(`📦 Processing basic package ${i + 1}/${json.length}: ${pkg.packageName}`);
       
       try {
-        // Enhanced image generation using Google Places and Pixabay
-        let images = {
-          header: '/default-travel.jpg',
-          gallery: ['/default-travel.jpg', '/default-travel.jpg', '/default-travel.jpg'],
-          accommodation: '/default-travel.jpg'
-        };
-        
+        // Generate basic image for header using new structure
+        let headerImage = '/default-travel.jpg';
         try {
-          // Use the new image service to get comprehensive images for the package
-          const enhancedImages = await ImageService.getImagesForPackage(pkg);
-          images = enhancedImages;
-          console.log(`🖼️ Enhanced images generated for: ${pkg.packageName}`);
+          // Use coverImageQuery if available, otherwise use first attraction or destination
+          const imageQuery = pkg.coverImageQuery || pkg.topAttractions?.[0] || to;
+          console.log(`🖼️ Attempting to generate image for: ${imageQuery}`);
+          
+          const imageUrl = await ImageService.getHeaderImage(imageQuery, to);
+          if (imageUrl && imageUrl !== '/default-travel.jpg') {
+            headerImage = imageUrl;
+            console.log(`✅ Generated header image: ${imageUrl}`);
+          } else {
+            console.log(`⚠️ No image generated, using default for: ${imageQuery}`);
+          }
         } catch (imageError) {
-          console.log('❌ Failed to generate enhanced images, using defaults. Error:', imageError.message);
-          // Use default images only - no additional API calls to save costs
+          console.log('❌ Failed to generate header image, using default:', imageError.message);
         }
 
-        // Validate and format dates
-        const formatDate = (dateString) => {
-          console.log('Formatting date:', dateString);
-          if (!dateString) {
-            console.log('No date string, using current date');
-            return new Date();
-          }
-          const date = new Date(dateString);
-          if (isNaN(date.getTime())) {
-            console.log('Invalid date, using current date');
-            return new Date();
-          }
-          console.log('Valid date:', date);
-          return date;
-        };
-
+        // Create professional itinerary with structured data
         const itinerary = new Itinerary({
           title: pkg.packageName,
-          days: pkg.days,
-          destinations: pkg.destinations,
-          placesToVisit: pkg.placesToVisit,
-          highlights: pkg.highlights,
-          price: pkg.price,
+          days: days, // Use calculated days from date range
+          destinations: [from, to],
+          placesToVisit: pkg.topAttractions || [],
+          highlights: pkg.inclusions || [],
+          price: pkg.pricePP,
           fromLocation: from,
           toLocation: to,
-          departureDate: formatDate(startDate),
-          returnDate: formatDate(endDate),
+          departureDate: new Date(startDate),
+          returnDate: new Date(endDate),
           travelers: travellers,
-          travelClass: travelClass,
-          headerImage: images.header,
-          galleryImages: images.gallery,
-          accommodationImage: images.accommodation
+          headerImage: headerImage,
+          galleryImages: ['/default-travel.jpg'],
+          accommodationImage: '/default-travel.jpg',
+          
+          // Professional package structure
+          packageType: pkg.packageType || 'mid-range',
+          summary: pkg.summary,
+          pricePP: pkg.pricePP,
+          priceBreakdown: pkg.priceBreakdown,
+          // hotelExample: pkg.hotelExample, // Temporarily commented out
+          topAttractions: pkg.topAttractions,
+          duration: pkg.duration,
+          groupSize: pkg.groupSize,
+          inclusions: pkg.inclusions,
+          exclusions: pkg.exclusions,
+          
+          // Add flag to indicate this needs detailed generation
+          needsDetailedGeneration: true
         });
         
-        console.log(`💾 Saving itinerary to database: ${pkg.packageName}`);
         await itinerary.save();
-        console.log(`✅ Itinerary saved successfully: ${pkg.packageName}`);
+        console.log(`✅ Basic package saved: ${pkg.packageName}`);
         
         savedItineraries.push({
-          id: itinerary._id,
+          id: itinerary._id.toString(),
           slug: itinerary.slug,
           itineraryId: itinerary.itineraryId,
-          headerImage: images.header,
-          galleryImages: images.gallery,
-          accommodationImage: images.accommodation,
-          ...pkg
+          headerImage: headerImage,
+          galleryImages: ['/default-travel.jpg'],
+          accommodationImage: '/default-travel.jpg',
+          needsDetailedGeneration: true,
+          
+          // Professional structure
+          packageName: pkg.packageName,
+          packageType: pkg.packageType,
+          summary: pkg.summary,
+          pricePP: pkg.pricePP,
+          priceBreakdown: pkg.priceBreakdown,
+          // hotelExample: pkg.hotelExample, // Temporarily commented out
+          topAttractions: pkg.topAttractions,
+          duration: pkg.duration,
+          groupSize: pkg.groupSize,
+          inclusions: pkg.inclusions,
+          exclusions: pkg.exclusions,
+          coverImageQuery: pkg.coverImageQuery,
+          destinations: [from, to],
+          placesToVisit: pkg.topAttractions || [],
+          highlights: pkg.inclusions || [],
+          fromLocation: from,
+          toLocation: to
         });
       } catch (saveError) {
-        console.error('❌ Error saving itinerary to database:', saveError);
+        console.error('❌ Error saving itinerary to database:', saveError.message);
+        console.error('❌ Error code:', saveError.code);
+        console.error('❌ Error name:', saveError.name);
+        console.error('❌ Full error:', saveError);
         console.error('❌ Itinerary data:', pkg);
         
-        // If database save fails, still return the itinerary data
-        // but with temporary IDs so the frontend can still work
-        const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        console.log(`🔄 Using temporary ID: ${tempId}`);
+        // If it's a duplicate key error, try to save with a unique identifier
+        if (saveError.code === 11000 && saveError.keyPattern && saveError.keyPattern.slug) {
+          console.log('🔄 Duplicate slug detected, retrying with unique identifier...');
+          try {
+            // Add a unique timestamp to the title to ensure unique slug
+            const uniqueTitle = `${pkg.packageName}-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+            const retryItinerary = new Itinerary({
+              ...itinerary.toObject(),
+              title: uniqueTitle,
+              slug: undefined // Force regeneration of slug
+            });
+            
+            await retryItinerary.save();
+            console.log(`✅ Retry successful with unique title: ${uniqueTitle}`);
         
         savedItineraries.push({
-          id: tempId,
-          slug: `temp-slug-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
-          itineraryId: `TEMP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              id: retryItinerary._id.toString(),
+              slug: retryItinerary.slug,
+              itineraryId: retryItinerary.itineraryId,
           headerImage: '/default-travel.jpg',
-          galleryImages: ['/default-travel.jpg', '/default-travel.jpg', '/default-travel.jpg'],
+              galleryImages: ['/default-travel.jpg'],
           accommodationImage: '/default-travel.jpg',
-          ...pkg
-        });
+              needsDetailedGeneration: true,
+              
+              // Professional structure
+              packageName: pkg.packageName,
+              packageType: pkg.packageType,
+              summary: pkg.summary,
+              pricePP: pkg.pricePP,
+              priceBreakdown: pkg.priceBreakdown,
+              // hotelExample: pkg.hotelExample,
+              topAttractions: pkg.topAttractions,
+              duration: pkg.duration,
+              groupSize: pkg.groupSize,
+              inclusions: pkg.inclusions,
+              exclusions: pkg.exclusions,
+              coverImageQuery: pkg.coverImageQuery,
+              destinations: [from, to],
+              placesToVisit: pkg.topAttractions || [],
+              highlights: pkg.inclusions || [],
+              fromLocation: from,
+              toLocation: to
+            });
+            continue; // Skip the fallback below
+          } catch (retryError) {
+            console.error('❌ Retry also failed:', retryError.message);
+          }
+        }
+        
+        console.log('⚠️ Skipping itinerary due to save failure. Not returning a temporary ID.');
       }
     }
 
@@ -733,17 +946,32 @@ Return ONLY valid JSON array. Do not include any explanation, comments, or markd
     
     // Track the search activity
     await req.trackSearch(
-      { from, to, departureDate, returnDate, travellers, travelClass },
+          { from, to, departureDate, returnDate, travellers, priceRange },
       processingTime,
       savedItineraries.length
     );
     
-    console.log(`🎉 Successfully processed ${savedItineraries.length} itineraries`);
-    console.log(`⏱️ Total processing time: ${processingTime}ms`);
+            // console.log(`🎉 Successfully processed ${savedItineraries.length} itineraries`);
+        // console.log(`⏱️ Total processing time: ${processingTime}ms`);
+    
+    // ===== STAGE 1 RESULTS SUMMARY =====
+    console.log('\n🤖 ===== STAGE 1: PROFESSIONAL PACKAGES SUMMARY =====');
+    console.log('📦 Total professional packages generated:', savedItineraries.length);
+    console.log('💾 Total packages saved to database:', savedItineraries.length);
+    console.log('📊 Package details:');
+    savedItineraries.forEach((it, index) => {
+      console.log(`  ${index + 1}. ${it.packageName} (${it.packageType})`);
+      console.log(`     💰 Price: ₹${it.pricePP}/person`);
+              // console.log(`     🏨 Hotel: ${it.hotelExample?.name} (${it.hotelExample?.type})`);
+      console.log(`     🎯 Attractions: ${it.topAttractions?.join(', ')}`);
+    });
+    console.log('💡 Note: Professional detailed itineraries available on-demand');
+    console.log('🤖 ===== END OF STAGE 1 SUMMARY =====\n');
     
     res.json({ 
       itineraries: savedItineraries,
-      message: 'Itineraries generated and saved successfully'
+      message: 'Basic packages generated successfully. Detailed information available on demand.',
+      stage: 'basic'
     });
   } catch (error) {
     console.error('❌ Critical error in itinerary generation:');
@@ -782,39 +1010,94 @@ app.get('/api/itinerary-details/:id', trackAIUsage('itinerary-details'), async (
     let details = await ItineraryDetails.findOne({ itineraryId: req.params.id });
     
     if (details) {
+      // Track itinerary view
+      await req.trackItineraryView(
+        itinerary._id.toString(),
+        itinerary.slug,
+        0 // viewDuration will be calculated on frontend
+      );
+      
       // Format the day-wise plan before sending to frontend
       const formattedDetails = processItineraryDetails(details.toObject());
       return res.json({ details: formattedDetails });
     }
     
+    // Track itinerary view
+    await req.trackItineraryView(
+      itinerary._id.toString(),
+      itinerary.slug,
+      0 // viewDuration will be calculated on frontend
+    );
+    
     // Generate new details if not exists
-    const userPrompt = `You are an experienced travel agent. Create a complete, day-wise, practical travel itinerary for ${itinerary.days} days for a trip from ${itinerary.fromLocation} to ${itinerary.toLocation} (${itinerary.destinations?.join(', ')}) for a ${itinerary.travelClass} traveler.
+    const userPrompt = `You are an experienced travel agent. Create a complete, day-wise, practical travel itinerary for ${itinerary.days} days for a trip from ${itinerary.fromLocation} to ${itinerary.toLocation} (${itinerary.destinations?.join(', ')}) for ${itinerary.travelers} travelers.
 
-**Your format must include:**
-1️⃣ **Day-wise plan:** Each day with clear heading + bullet points for activities (Morning/Afternoon/Evening if needed).
-2️⃣ **Accommodation:** Mention suggested hotel/resort for each night.
-3️⃣ **Activities Included:** Mention if sightseeing tickets, guides, cruises, or adventure sports are covered.
-4️⃣ **Transport Details:** Include arrival & departure flights or local transport if needed.
-5️⃣ **Meals:** Breakfast/Lunch/Dinner info if included or recommended.
-6️⃣ **Terms:** One short line about price inclusions/exclusions or taxes.
-7️⃣ **Contact/Booking Link:** Add a clear call to action.
+**CRITICAL FOR DAY PLANNING: Each day must have distinct morning, afternoon, and evening activities. Do NOT combine activities into a single description. Each time period should have specific, actionable activities.**
 
-Return a JSON object with these exact fields:
-- title (string, catchy title)
-- dates (string, e.g. "19–20 July 2025")
-- duration (string, e.g. "2 Days, 1 Night")
-- from (string)
-- to (string)
-- priceEstimate (string, e.g. "₹25,000 per person")
-- highlights (array of strings, 2–4 main attractions)
-- transportClass (string)
-- fullDayWisePlan (array of objects: { title: string, description: string, emoji: string })
-- accommodation (string, e.g. "1-night stay at Hotel XYZ, CP")
-- activitiesIncluded (string, e.g. "Sightseeing tickets, guided tours")
-- transportDetails (string, e.g. "Flight timings, airline, class")
-- meals (string, e.g. "Breakfast included")
-- terms (string, e.g. "Price inclusive of taxes")
-- bookingLink (string, e.g. "https://yourbooking.com/package/123")
+**CRITICAL: Return a JSON object with this EXACT structure:**
+
+**IMPORTANT PRICING NOTE: Always calculate and show price PER PERSON, not total price. The total price provided is for ${itinerary.travelers} travelers, so divide by ${itinerary.travelers} to get per-person cost.**
+
+{
+  "title": "string - catchy title",
+  "dates": "string - e.g. 19–20 July 2025",
+  "duration": "string - e.g. 2 Days, 1 Night",
+  "from": "string",
+  "to": "string",
+  "priceEstimate": "string - e.g. ₹25,000 per person (must specify 'per person')",
+  "highlights": ["array of 2-4 main attractions"],
+  "transportClass": "string",
+  "fullDayWisePlan": [
+    {
+      "title": "string - day title",
+      "emoji": "string - day emoji",
+      "morning": "string - morning activities (arrival, breakfast, early activities)",
+      "afternoon": "string - afternoon activities (sightseeing, lunch, main activities)",
+      "evening": "string - evening activities (dinner, relaxation, night activities)"
+    }
+  ],
+  "accommodation": "string - e.g. 1-night stay at Hotel XYZ, CP",
+  "activitiesIncluded": "string - e.g. Sightseeing tickets, guided tours",
+  "transportDetails": "string - e.g. Flight timings, airline, class",
+  "meals": "string - e.g. Breakfast included",
+  "terms": "string - e.g. Price inclusive of taxes",
+  "bookingLink": "string - e.g. https://yourbooking.com/package/123",
+  "structuredDetails": {
+    "accommodationDetails": {
+      "hotelName": "string - specific hotel name",
+      "hotelType": "string - budget/luxury/resort",
+      "nights": number,
+      "roomType": "string - room description",
+      "amenities": ["array of key amenities"],
+      "location": "string - hotel location"
+    },
+    "transportDetails": {
+      "arrival": "string - arrival transport details",
+      "departure": "string - departure transport details",
+      "local": "string - local transport details",
+      "included": ["array of included transport"]
+    },
+    "mealsDetails": {
+      "breakfast": "string - breakfast details",
+      "lunch": "string - lunch details",
+      "dinner": "string - dinner details",
+      "included": ["array of included meals"],
+      "recommendations": ["array of restaurant recommendations"]
+    },
+    "activitiesDetails": {
+      "included": ["array of included activities"],
+      "optional": ["array of optional activities"],
+      "guides": "string - guide information",
+      "tickets": "string - ticket information"
+    },
+    "termsAndConditions": {
+      "priceInclusions": ["array of what's included"],
+      "priceExclusions": ["array of what's excluded"],
+      "cancellation": "string - cancellation policy",
+      "validity": "string - offer validity"
+    }
+  }
+}
 
 Package summary to work with:
 Title: ${itinerary.title}
@@ -822,10 +1105,48 @@ Days: ${itinerary.days}
 Destinations: ${itinerary.destinations?.join(', ')}
 Places to Visit: ${itinerary.placesToVisit?.join(', ')}
 Highlights: ${itinerary.highlights?.join(', ')}
-Price: ${itinerary.price}
+Total Price: ${itinerary.price} (for ${itinerary.travelers} travelers)
+Price Per Person: ${Math.round(itinerary.price / itinerary.travelers)}
 From: ${itinerary.fromLocation}
 To: ${itinerary.toLocation}
-Transport Class: ${itinerary.travelClass}
+Travelers: ${itinerary.travelers}
+
+**Example structuredDetails:**
+{
+  "accommodationDetails": {
+    "hotelName": "Hotel Mayfair Darjeeling",
+    "hotelType": "luxury",
+    "nights": 3,
+    "roomType": "Deluxe Room with Mountain View",
+    "amenities": ["WiFi", "Restaurant", "Spa", "Mountain View"],
+    "location": "Central Darjeeling, 5 minutes from Mall Road"
+  },
+  "transportDetails": {
+    "arrival": "Private airport transfer from Bagdogra Airport (IXB)",
+    "departure": "Private transfer to Bagdogra Airport (IXB)",
+    "local": "Private car with driver for local sightseeing",
+    "included": ["Airport transfers", "Local sightseeing", "Hotel pickups"]
+  },
+  "mealsDetails": {
+    "breakfast": "Daily buffet breakfast at hotel restaurant",
+    "lunch": "Lunch at local restaurants (not included)",
+    "dinner": "Dinner at hotel or local restaurants (not included)",
+    "included": ["Daily breakfast"],
+    "recommendations": ["Glenary's Restaurant", "Kunga Restaurant", "Sonam's Kitchen"]
+  },
+  "activitiesDetails": {
+    "included": ["Toy Train ride", "Tea garden visit", "Local market tour"],
+    "optional": ["Tiger Hill sunrise", "Adventure sports", "Spa treatments"],
+    "guides": "Professional English-speaking guide for sightseeing",
+    "tickets": "All monument and attraction entry tickets included"
+  },
+  "termsAndConditions": {
+    "priceInclusions": ["Hotel accommodation", "Daily breakfast", "Airport transfers", "Local transport", "Guide services"],
+    "priceExclusions": ["Airfare", "Lunch and dinner", "Personal expenses", "Optional activities"],
+    "cancellation": "Free cancellation up to 7 days before travel",
+    "validity": "Valid for travel until December 2025"
+  }
+}
 
 Return ONLY valid JSON. Do not include any explanation, comments, or markdown code blocks. All property names and strings must use double quotes.`;
 
@@ -869,7 +1190,8 @@ Return ONLY valid JSON. Do not include any explanation, comments, or markdown co
       transportDetails: json.transportDetails,
       meals: json.meals,
       terms: json.terms,
-      bookingLink: json.bookingLink
+      bookingLink: json.bookingLink,
+      structuredDetails: json.structuredDetails
     });
     
     await details.save();
@@ -902,9 +1224,273 @@ app.get('/api/itinerary/:id', async (req, res) => {
     if (!itinerary) {
       return res.status(404).json({ error: 'Itinerary not found' });
     }
+    
+    // Track itinerary view
+    await req.trackItineraryView(
+      itinerary._id.toString(),
+      itinerary.slug,
+      0 // viewDuration will be calculated on frontend
+    );
+    
     res.json({ itinerary });
   } catch (error) {
     res.status(500).json({ error: 'Database error' });
+  }
+});
+
+// Get detailed itinerary (if exists)
+app.get('/api/itinerary-details/:id', async (req, res) => {
+  try {
+    const itinerary = await Itinerary.findById(req.params.id);
+    if (!itinerary) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    // Check if detailed information exists
+    if (itinerary.needsDetailedGeneration) {
+      return res.status(404).json({ error: 'Detailed information not yet generated' });
+    }
+
+    // Format the detailed information
+    const formattedDetails = {
+      // Legacy fields for backward compatibility
+      dayPlans: itinerary.dayPlans || JSON.parse(itinerary.details || '[]'),
+      accommodation: itinerary.accommodation || itinerary.accommodationDetails,
+      transport: itinerary.transport || itinerary.transportDetails,
+      meals: itinerary.mealsDetails,
+      activities: itinerary.activitiesDetails,
+      terms: itinerary.termsAndConditions,
+      
+      // New structured format
+      structuredDetails: {
+        accommodationDetails: itinerary.accommodation || itinerary.accommodationDetails || {},
+        transportDetails: itinerary.transport || itinerary.transportDetails || {},
+        mealsDetails: itinerary.mealsDetails || {},
+        activitiesDetails: itinerary.activitiesDetails || {},
+        termsAndConditions: itinerary.termsAndConditions || {}
+      },
+      
+      // Additional fields
+      title: itinerary.tripTitle || itinerary.title,
+      fullDayWisePlan: itinerary.dayPlans || JSON.parse(itinerary.details || '[]'),
+      priceEstimate: itinerary.priceSummary || `₹${Math.round(itinerary.price / itinerary.travelers).toLocaleString()} per person`,
+      mealCostEstimates: itinerary.mealCostEstimates,
+      whatsIncluded: itinerary.whatsIncluded || [],
+      whatsNotIncluded: itinerary.whatsNotIncluded || [],
+      cancellationPolicy: itinerary.cancellationPolicy,
+      accessibility: itinerary.accessibility,
+      languages: itinerary.languages,
+      meetingPoint: itinerary.meetingPoint,
+      startTime: itinerary.startTime,
+      endTime: itinerary.endTime
+    };
+
+    res.json({ details: formattedDetails });
+  } catch (error) {
+    console.error('❌ Error fetching detailed information:', error);
+    res.status(500).json({ error: 'Failed to fetch detailed information' });
+  }
+});
+
+// Generate detailed itinerary on-demand (Stage 2)
+app.post('/api/itinerary/:id/generate-details', async (req, res) => {
+  try {
+    const itinerary = await Itinerary.findById(req.params.id);
+    if (!itinerary) {
+      return res.status(404).json({ error: 'Itinerary not found' });
+    }
+
+    // Check if details already exist
+    if (!itinerary.needsDetailedGeneration) {
+      return res.json({ 
+        message: 'Detailed information already exists',
+        itinerary 
+      });
+    }
+
+    console.log(`🤖 Generating detailed information for: ${itinerary.title}`);
+
+    // Determine appropriate transportation mode for detailed generation
+    const transportMode = getTransportMode(itinerary.fromLocation, itinerary.toLocation);
+    const transportModeText = transportMode === 'flight' ? 'flight' : transportMode === 'train' ? 'train' : 'bus';
+    const transportDetails = transportMode === 'flight' ? 
+      `${transportModeText} details with airline, timing, and class` : 
+      transportMode === 'train' ? 
+      `${transportModeText} details with train number, timing, and class` : 
+      `${transportModeText} details with timing and operator`;
+
+    // Stage 2: Professional detailed itinerary prompt
+    const detailedPrompt = `Generate EXACT ${itinerary.days}-day itinerary for ${itinerary.title} package in ${itinerary.toLocation} from ${itinerary.fromLocation}.
+
+**Transportation Mode:** ${transportModeText.toUpperCase()} (recommended for this route)
+
+**Required Structure:**
+{
+  "tripTitle": "string - professional title",
+  "priceSummary": "₹XX,XXX per person (total ₹${Math.round(itinerary.price).toLocaleString()} for ${itinerary.travelers} people)",
+  "transport": {
+    "toDestination": "${transportDetails}",
+    "local": "Local transport type (private car/public transport)",
+    "pickupDetails": "Pickup time and location",
+    "dropoffDetails": "Drop-off time and location"
+  },
+  "accommodation": {
+    "name": "Real hotel name (e.g., Taj Palace, Oberoi, Leela Palace, ITC Grand, Marriott, Hyatt, Radisson, Novotel)",
+    "type": "3-star/4-star/5-star based on package type",
+    "location": "Specific area/location in ${itinerary.toLocation}",
+    "amenities": ["Free WiFi", "Pool", "Breakfast", "Restaurant", "Spa", "Gym", "Room Service", "Air Conditioning"],
+    "costPerNight": number (expected budget: 2000-4000, mid-range: 5000-8000, luxury: 10000-20000),
+    "roomType": "Deluxe Room/Standard Room/Suite based on package type"
+  },
+  "dayPlans": [
+    {
+      "day": 1,
+      "theme": "Arrival & City Introduction",
+      "morning": "Activity with timing (e.g., 9:00 AM - Airport pickup)",
+      "afternoon": "Activity with timing (e.g., 2:00 PM - Hotel check-in)",
+      "evening": "Activity with timing (e.g., 6:00 PM - Dinner at local restaurant)",
+      "meals": "Breakfast/Lunch/Dinner inclusions",
+      "photoQuery": "specific attraction at golden hour",
+      "duration": "8 hours total"
+    }
+  ],
+  "mealCostEstimates": {
+    "budget": "Expected ₹500-700 pp/day",
+    "mid-range": "Expected ₹1,000-1,500 pp/day", 
+    "luxury": "Expected ₹2,500+ pp/day"
+  },
+  "whatsIncluded": [
+    "Professional English-speaking guide",
+    "Hotel accommodation",
+    "Daily breakfast",
+    "Transportation",
+    "Sightseeing tickets"
+  ],
+  "whatsNotIncluded": [
+    "Lunch and dinner",
+    "Personal expenses",
+    "Optional activities",
+    "Tips and gratuities"
+  ],
+  "cancellationPolicy": "Free cancellation up to 24 hours before travel",
+  "accessibility": "Not wheelchair accessible, Pushchair accessible",
+  "groupSize": "Max ${itinerary.travelers} travelers",
+  "languages": "English guide, Audio guides available",
+  "meetingPoint": "Hotel pickup or central location",
+  "startTime": "8:30 AM",
+  "endTime": "6:30 PM"
+}
+
+Return ONLY valid JSON. No explanations.`;
+
+    // Call AI for detailed generation
+    const response = await axios.post(
+      GEMINI_API_URL,
+      {
+        contents: [{ role: 'user', parts: [{ text: detailedPrompt }] }]
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        params: { key: GEMINI_25_FLASH_LITE_API_KEY },
+        timeout: 30000
+      }
+    );
+
+    const content = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let jsonString = content.replace(/```json|```/g, '').trim();
+    const match = jsonString.match(/\{.*\}/s);
+    if (match) jsonString = match[0];
+
+    const detailedData = JSON.parse(jsonString);
+
+    // Generate hotel image if accommodation details are available
+    if (detailedData.accommodation && detailedData.accommodation.name) {
+      try {
+        console.log(`🏨 Generating hotel image for: ${detailedData.accommodation.name}`);
+        const hotelImageQuery = `${detailedData.accommodation.name} ${detailedData.accommodation.location || itinerary.toLocation} hotel exterior`;
+        
+        // Try to get hotel image from Google Places
+        if (GOOGLE_PLACES_API_KEY) {
+          const placesResponse = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
+            params: {
+              query: hotelImageQuery,
+              key: GOOGLE_PLACES_API_KEY,
+              type: 'lodging',
+              maxwidth: 800,
+              maxheight: 600
+            },
+            timeout: 10000
+          });
+          
+          if (placesResponse.data.results && placesResponse.data.results.length > 0) {
+            const placeResult = placesResponse.data.results[0];
+            if (placeResult.photos && placeResult.photos.length > 0) {
+              const photo = placeResult.photos[0];
+              const photoReference = photo.photo_reference;
+              const hotelImageUrl = `http://localhost:${process.env.PORT || 3001}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=800&maxheight=600&key=${GOOGLE_PLACES_API_KEY}`;
+              
+              // Add image URL to accommodation data
+              detailedData.accommodation.imageUrl = hotelImageUrl;
+              console.log(`✅ Hotel image generated: ${hotelImageUrl}`);
+            }
+          }
+        }
+      } catch (imageError) {
+        console.log(`❌ Failed to generate hotel image: ${imageError.message}`);
+      }
+    }
+
+    // Update itinerary with professional detailed information
+    const updatedItinerary = await Itinerary.findByIdAndUpdate(
+      req.params.id,
+      {
+        // Professional detailed structure
+        tripTitle: detailedData.tripTitle,
+        priceSummary: detailedData.priceSummary,
+        transport: detailedData.transport,
+        accommodation: detailedData.accommodation,
+        dayPlans: detailedData.dayPlans,
+        mealCostEstimates: detailedData.mealCostEstimates,
+        whatsIncluded: detailedData.whatsIncluded,
+        whatsNotIncluded: detailedData.whatsNotIncluded,
+        cancellationPolicy: detailedData.cancellationPolicy,
+        accessibility: detailedData.accessibility,
+        languages: detailedData.languages,
+        meetingPoint: detailedData.meetingPoint,
+        startTime: detailedData.startTime,
+        endTime: detailedData.endTime,
+        
+        // Legacy fields for backward compatibility
+        details: JSON.stringify(detailedData.dayPlans),
+        accommodationDetails: detailedData.accommodation,
+        transportDetails: detailedData.transport,
+        mealsDetails: detailedData.mealCostEstimates,
+        activitiesDetails: { included: detailedData.whatsIncluded, optional: detailedData.whatsNotIncluded },
+        termsAndConditions: { 
+          priceInclusions: detailedData.whatsIncluded,
+          priceExclusions: detailedData.whatsNotIncluded,
+          cancellation: detailedData.cancellationPolicy
+        },
+        
+        needsDetailedGeneration: false,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+
+    console.log(`✅ Detailed information generated for: ${itinerary.title}`);
+
+    res.json({ 
+      message: 'Detailed information generated successfully',
+      itinerary: updatedItinerary
+    });
+
+  } catch (error) {
+    console.error('❌ Error generating detailed information:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate detailed information',
+      details: error.message 
+    });
   }
 });
 
@@ -969,6 +1555,76 @@ app.post('/api/itinerary/:id/share', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: 'Failed to update share count' });
+  }
+});
+
+// Save search to history
+app.post('/api/search-history', async (req, res) => {
+  try {
+    const { userId, searchData, resultsCount } = req.body;
+    
+    if (!userId || !searchData) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+
+    const searchHistory = new SearchHistory({
+      userId,
+      searchData: {
+        ...searchData,
+        priceRange: {
+          min: searchData.priceRange?.[0] || 0,
+          max: searchData.priceRange?.[1] || 50000
+        }
+      },
+      resultsCount
+    });
+
+    await searchHistory.save();
+    res.json({ success: true, searchHistory });
+  } catch (error) {
+    console.error('Error saving search history:', error);
+    res.status(500).json({ error: 'Failed to save search history' });
+  }
+});
+
+// Get user search history
+app.get('/api/search-history/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { limit = 10 } = req.query;
+
+    const searchHistory = await SearchHistory.find({ userId })
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    res.json({ searchHistory });
+  } catch (error) {
+    console.error('Error fetching search history:', error);
+    res.status(500).json({ error: 'Failed to fetch search history' });
+  }
+});
+
+// Delete search history item
+app.delete('/api/search-history/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await SearchHistory.findByIdAndDelete(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting search history:', error);
+    res.status(500).json({ error: 'Failed to delete search history' });
+  }
+});
+
+// Clear all search history for user
+app.delete('/api/search-history/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    await SearchHistory.deleteMany({ userId });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error clearing search history:', error);
+    res.status(500).json({ error: 'Failed to clear search history' });
   }
 });
 
@@ -1454,6 +2110,9 @@ app.get('/api/destination-gallery', trackAIUsage('destination-gallery'), async (
     
     console.log('Final search terms for gallery:', searchTerms);
     
+    // Get the primary destination for search strategies
+    const primaryDestination = destinationsArray.length > 0 ? destinationsArray[0] : '';
+    
     // Fetch images for each search term
     for (let i = 0; i < Math.min(searchTerms.length, 3); i++) {
       const searchTerm = searchTerms[i];
@@ -1469,7 +2128,7 @@ app.get('/api/destination-gallery', trackAIUsage('destination-gallery'), async (
           // Try different search strategies to get diverse images
           const searchStrategies = [
             searchTerm,
-            `${searchTerm} ${destination}`,
+            primaryDestination ? `${searchTerm} ${primaryDestination}` : searchTerm,
             `${searchTerm} tourist attraction`,
             `${searchTerm} landmark`,
             `${searchTerm} monument`
@@ -1690,7 +2349,7 @@ app.get('/api/test-google-places', async (req, res) => {
         // Get the photo URL - proxy through our server to avoid CORS issues
         const photoUrl = `http://localhost:${process.env.PORT || 3001}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=400&maxheight=300&key=${GOOGLE_PLACES_API_KEY}`;
         
-        console.log('📸 Image source: google_places for', place);
+        // Image source: google_places for debugging (commented out to reduce console noise)
         
         return res.json({
           success: true,
