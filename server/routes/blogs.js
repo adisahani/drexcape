@@ -31,6 +31,17 @@ const upload = multer({
 // Get all published blogs (public)
 router.get('/published', async (req, res) => {
   try {
+    // Check if MongoDB is available
+    if (!process.env.MONGODB_URI) {
+      console.log('⚠️  MongoDB not available, returning empty blogs');
+      return res.json({
+        blogs: [],
+        totalPages: 0,
+        currentPage: 1,
+        total: 0
+      });
+    }
+
     const { page = 1, limit = 10, category, search } = req.query;
     
     const query = { status: 'published' };
@@ -64,13 +75,25 @@ router.get('/published', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching blogs:', error);
-    res.status(500).json({ error: 'Failed to fetch blogs' });
+    // Return empty response instead of error to prevent frontend crashes
+    res.json({
+      blogs: [],
+      totalPages: 0,
+      currentPage: 1,
+      total: 0
+    });
   }
 });
 
 // Get single blog by slug (public)
 router.get('/:slug', async (req, res) => {
   try {
+    // Check if MongoDB is available
+    if (!process.env.MONGODB_URI) {
+      console.log('⚠️  MongoDB not available, returning blog not found');
+      return res.status(404).json({ error: 'Blog not found' });
+    }
+
     const { slug } = req.params;
     
     const blog = await Blog.findOne({ slug, status: 'published' })
@@ -87,7 +110,7 @@ router.get('/:slug', async (req, res) => {
     res.json(blog);
   } catch (error) {
     console.error('Error fetching blog:', error);
-    res.status(500).json({ error: 'Failed to fetch blog' });
+    res.status(404).json({ error: 'Blog not found' });
   }
 });
 
@@ -319,17 +342,30 @@ router.post('/:id/share', async (req, res) => {
 // Get blog categories
 router.get('/categories/list', async (req, res) => {
   try {
+    // Check if MongoDB is available
+    if (!process.env.MONGODB_URI) {
+      console.log('⚠️  MongoDB not available, returning empty categories');
+      return res.json([]);
+    }
+
     const categories = await Blog.distinct('category');
     res.json(categories);
   } catch (error) {
     console.error('Error fetching categories:', error);
-    res.status(500).json({ error: 'Failed to fetch categories' });
+    // Return empty array instead of error to prevent frontend crashes
+    res.json([]);
   }
 });
 
 // Get popular blogs
 router.get('/popular/list', async (req, res) => {
   try {
+    // Check if MongoDB is available
+    if (!process.env.MONGODB_URI) {
+      console.log('⚠️  MongoDB not available, returning empty popular blogs');
+      return res.json([]);
+    }
+
     const blogs = await Blog.find({ status: 'published' })
       .sort({ views: -1, likes: -1 })
       .limit(5)
@@ -338,7 +374,8 @@ router.get('/popular/list', async (req, res) => {
     res.json(blogs);
   } catch (error) {
     console.error('Error fetching popular blogs:', error);
-    res.status(500).json({ error: 'Failed to fetch popular blogs' });
+    // Return empty array instead of error to prevent frontend crashes
+    res.json([]);
   }
 });
 

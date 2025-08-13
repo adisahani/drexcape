@@ -9,6 +9,22 @@ services:
         value: production
       - key: PORT
         value: 5000
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: GEMINI_25_FLASH_LITE_API_KEY
+        sync: false
+      - key: PIXABAY_API_KEY
+        sync: false
+      - key: GOOGLE_PLACES_API_KEY
+        sync: false
 
   - type: web
     name: drexcape-frontend

@@ -188,6 +188,12 @@ router.delete('/:id', async (req, res) => {
 // Get popular searches (recent itineraries)
 router.get('/popular/searches', async (req, res) => {
   try {
+    // Check if MongoDB is available
+    if (!process.env.MONGODB_URI) {
+      console.log('⚠️  MongoDB not available, returning empty popular searches');
+      return res.json({ popularItineraries: [] });
+    }
+
     // Get recent itineraries with valid slugs and full details, limit to 10 most recent
     const popularItineraries = await Itinerary.find({
       slug: { $exists: true, $ne: null, $ne: '' }, // Only itineraries with valid slugs
@@ -205,7 +211,8 @@ router.get('/popular/searches', async (req, res) => {
     res.json({ popularItineraries });
   } catch (error) {
     console.error('Get popular searches error:', error);
-    res.status(500).json({ error: 'Failed to get popular searches' });
+    // Return empty array instead of error to prevent frontend crashes
+    res.json({ popularItineraries: [] });
   }
 });
 

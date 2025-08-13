@@ -26,7 +26,12 @@ app.use((req, res, next) => {
 });
 
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'],
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:5173',
+    'https://drexcape.onrender.com',
+    'https://drexcape-frontend.onrender.com'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -36,24 +41,48 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Session middleware for user tracking with MongoDB store
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'drexcape-secret-key',
-  resave: false,
-  saveUninitialized: true,
-  store: MongoStore.create({ 
-    mongoUrl: process.env.MONGODB_URI,
-    collectionName: 'sessions',
-    ttl: 24 * 60 * 60 // 1 day in seconds
-  }),
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    httpOnly: true,
-    sameSite: 'lax'
-  }
-}));
+if (process.env.MONGODB_URI) {
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'drexcape-secret-key',
+    resave: false,
+    saveUninitialized: true,
+    store: MongoStore.create({ 
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: 'sessions',
+      ttl: 24 * 60 * 60 // 1 day in seconds
+    }),
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      sameSite: 'lax'
+    }
+  }));
+} else {
+  // Fallback to memory store if MongoDB is not available
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'drexcape-secret-key',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { 
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      httpOnly: true,
+      sameSite: 'lax'
+    }
+  }));
+}
 
 app.use(activityTracker);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    mongodb: !!process.env.MONGODB_URI
+  });
+});
 
 // Import routes
 const adminAuthRoutes = require('./routes/adminAuth');
@@ -2419,7 +2448,7 @@ app.use('/api/blogs', blogRoutes);
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on port ${PORT}`);
   console.log(`📊 Test endpoint: http://localhost:${PORT}/api/test`);

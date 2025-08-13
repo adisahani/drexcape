@@ -7,8 +7,8 @@ const getApiBaseUrl = () => {
   }
   
   // In production, use the backend service URL
-  // Replace with your actual Render backend URL
-  return 'https://drexcape.onrender.com';
+  // Use the backend service URL from Render
+  return 'https://drexcape-backend.onrender.com';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
