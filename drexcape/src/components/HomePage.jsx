@@ -25,6 +25,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 import PromotionalPopup from './PromotionalPopup';
+import ConnectionDebug from './ConnectionDebug';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -630,6 +631,9 @@ const HomePage = () => {
           <FlightSearchCard onSearchWithUserData={handleSearchWithUserData} />
         </div>
       </section>
+
+      {/* Connection Debug Component - Temporary */}
+      <ConnectionDebug />
 
       {/* Popular Destinations */}
       <section className="popular-destinations full-width-section" id="destinations" ref={destinationsRef}>

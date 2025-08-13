@@ -31,7 +31,8 @@ app.use(cors({
     'http://localhost:3000', 
     'http://localhost:5173',
     'https://drexcape.onrender.com',
-    'https://drexcape-frontend.onrender.com'
+    'https://drexcape-frontend.onrender.com',
+    'https://drexcape-web.onrender.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -76,6 +77,12 @@ if (process.env.MONGODB_URI) {
 
 app.use(activityTracker);
 
+// Request logger middleware
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} - Origin: ${req.headers.origin || 'unknown'}`);
+  next();
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -83,7 +90,16 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     mongodb: !!process.env.MONGODB_URI,
     port: process.env.PORT || 3001,
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    cors: {
+      allowedOrigins: [
+        'http://localhost:3000', 
+        'http://localhost:5173',
+        'https://drexcape.onrender.com',
+        'https://drexcape-frontend.onrender.com',
+        'https://drexcape-web.onrender.com'
+      ]
+    }
   });
 });
 

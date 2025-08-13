@@ -3,19 +3,24 @@ const getApiBaseUrl = () => {
   // Check if we're in development (localhost)
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
     // In development, use relative paths (handled by Vite proxy)
+    console.log('🔧 Development mode: Using relative API paths');
     return '';
   }
   
   // In production, use the backend service URL
   // Use the backend service URL from Render
-  return 'https://drexcape-backend.onrender.com';
+  const productionUrl = 'https://drexcape.onrender.com';
+  console.log('🚀 Production mode: Using backend URL:', productionUrl);
+  return productionUrl;
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
 // Helper function to build API URLs
 export const buildApiUrl = (endpoint) => {
-  return `${API_BASE_URL}${endpoint}`;
+  const fullUrl = `${API_BASE_URL}${endpoint}`;
+  console.log('🔗 Building API URL:', fullUrl);
+  return fullUrl;
 };
 
 // Common API endpoints
