@@ -15,6 +15,7 @@ if (process.env.MONGODB_URI) {
   connectDB();
 } else {
   console.log('⚠️  MONGODB_URI not found. Admin features will not work.');
+  console.log('⚠️  Available environment variables:', Object.keys(process.env).filter(key => !key.includes('SECRET') && !key.includes('KEY')));
 }
 
 const app = express();
@@ -80,7 +81,17 @@ app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    mongodb: !!process.env.MONGODB_URI
+    mongodb: !!process.env.MONGODB_URI,
+    port: process.env.PORT || 3001,
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Simple test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -2451,7 +2462,9 @@ app.use('/api/analytics', analyticsRoutes);
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Backend running on port ${PORT}`);
-  console.log(`📊 Test endpoint: http://localhost:${PORT}/api/test`);
+  console.log(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`🔧 Available env vars: ${Object.keys(process.env).filter(key => !key.includes('SECRET') && !key.includes('KEY')).join(', ')}`);
   if (!process.env.MONGODB_URI) {
     console.log('⚠️  MongoDB not configured. Admin features disabled.');
   } else {
