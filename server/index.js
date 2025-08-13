@@ -713,7 +713,10 @@ function getTransportMode(from, to) {
               destinations: pkg.destinations,
               placesToVisit: pkg.placesToVisit,
               fromLocation: from,
-              toLocation: to
+              toLocation: to,
+              headerImage: images.header,
+              galleryImages: images.gallery,
+              accommodationImage: images.accommodation
             });
             
             const itinerary = new Itinerary({
