@@ -92,14 +92,11 @@ class ImageService {
 
         if (detailsResponse.data.result?.photos?.length) {
           const photoRef = detailsResponse.data.result.photos[0].photo_reference;
-          // Use full backend URL for deployed version
-          const backendUrl = process.env.NODE_ENV === 'production' 
-            ? 'https://drexcape.onrender.com' 
-            : `http://localhost:${process.env.PORT || 3001}`;
+          // Always use the production backend URL for deployed version
+          const backendUrl = 'https://drexcape.onrender.com';
           const photoUrl = `${backendUrl}/api/proxy-google-image?photoreference=${photoRef}&maxwidth=${maxWidth}&key=${GOOGLE_PLACES_API_KEY}`;
           
           console.log(`✅ Google Places photo found for: ${placeQuery} (${place.name})`);
-          console.log(`🔗 Using proxy URL: ${photoUrl}`);
           return photoUrl;
         }
       }
@@ -172,10 +169,10 @@ class ImageService {
     const accommodationImageQuery = `luxury hotel accommodation in ${destinations?.[0] || 'travel destination'}`;
     const galleryImageQuery = placesToVisit?.[0] || `${destinations?.[0]} landmark`;
     
-    console.log(`🖼️ Generating images for package: ${packageName} (3 IMAGES TOTAL)`);
-    console.log(`📸 Header query: ${headerImageQuery}`);
-    console.log(`🏨 Accommodation query: ${accommodationImageQuery}`);
-    console.log(`🖼️ Gallery query: ${galleryImageQuery}`);
+    // console.log(`🖼️ Generating images for package: ${packageName} (3 IMAGES TOTAL)`);
+    // console.log(`📸 Header query: ${headerImageQuery}`);
+    // console.log(`🏨 Accommodation query: ${accommodationImageQuery}`);
+    // console.log(`🖼️ Gallery query: ${galleryImageQuery}`);
 
     // Try Google Places for all three images
     const [headerImage, accommodationImage, galleryImage] = await Promise.all([
@@ -191,12 +188,7 @@ class ImageService {
       gallery: [galleryImage || this.defaultImages.gallery[0]] // 1 gallery image
     };
 
-    console.log(`✅ Image generation completed for: ${packageName} (3 images total: header, accommodation, gallery)`);
-    console.log(`📸 Generated URLs:`, {
-      header: images.header,
-      gallery: images.gallery,
-      accommodation: images.accommodation
-    });
+    // console.log(`✅ Image generation completed for: ${packageName} (3 images total: header, accommodation, gallery)`);
     return images;
   }
 

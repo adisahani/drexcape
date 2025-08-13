@@ -17,13 +17,6 @@ const EnhancedItineraryCard = ({
   const getAllImages = () => {
     const images = [];
     
-    console.log('🖼️ Processing images for itinerary:', {
-      title: itinerary.packageName || itinerary.title,
-      headerImage: itinerary.headerImage,
-      galleryImages: itinerary.galleryImages,
-      accommodationImage: itinerary.accommodationImage
-    });
-    
     // Add header image
     if (itinerary.headerImage) {
       images.push({ url: itinerary.headerImage, type: 'header' });
@@ -43,7 +36,6 @@ const EnhancedItineraryCard = ({
       images.push({ url: itinerary.accommodationImage, type: 'accommodation' });
     }
     
-    console.log('🎨 Final processed images:', images);
     return images;
   };
 
@@ -51,8 +43,7 @@ const EnhancedItineraryCard = ({
   const hasMultipleImages = images.length > 1;
 
   const handleImageError = (e) => {
-    console.log('❌ Image failed to load:', e.target.src);
-    console.log('🔄 Falling back to default image');
+    console.log('Image failed to load, using default');
     e.target.src = '/default-travel.jpg';
     setImageError(true);
   };
@@ -65,12 +56,9 @@ const EnhancedItineraryCard = ({
 
   const getCurrentImage = () => {
     if (images.length === 0) {
-      console.log('⚠️ No images available, using default');
       return '/default-travel.jpg';
     }
-    const currentImage = images[currentImageIndex]?.url || '/default-travel.jpg';
-    console.log('🖼️ Current image URL:', currentImage);
-    return currentImage;
+    return images[currentImageIndex]?.url || '/default-travel.jpg';
   };
 
   const getImageTypeLabel = () => {
