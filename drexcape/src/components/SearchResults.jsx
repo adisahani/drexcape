@@ -34,7 +34,8 @@ const SearchResults = () => {
         travellers: state.travellers || 1,
         travelClass: state.travelClass || 'Economy',
         startDate: getDateValue(state.startDate || state.departureDate),
-        endDate: getDateValue(state.endDate || state.returnDate)
+        endDate: getDateValue(state.endDate || state.returnDate),
+        priceRange: state.priceRange || [0, 50000]
       };
     }
     
@@ -46,7 +47,8 @@ const SearchResults = () => {
         travellers: state.searchParams.travellers || 1,
         travelClass: state.searchParams.travelClass || 'Economy',
         startDate: getDateValue(state.searchParams.startDate || state.searchParams.departureDate),
-        endDate: getDateValue(state.searchParams.endDate || state.searchParams.returnDate)
+        endDate: getDateValue(state.searchParams.endDate || state.searchParams.returnDate),
+        priceRange: state.searchParams.priceRange || [0, 50000]
       };
     }
     
@@ -61,7 +63,8 @@ const SearchResults = () => {
           travellers: parsed.travellers || 1,
           travelClass: parsed.travelClass || 'Economy',
           startDate: getDateValue(parsed.startDate || parsed.departureDate),
-          endDate: getDateValue(parsed.endDate || parsed.returnDate)
+          endDate: getDateValue(parsed.endDate || parsed.returnDate),
+          priceRange: parsed.priceRange || [0, 50000]
         };
       } catch (error) {
         console.error('Error parsing stored search params:', error);
@@ -75,7 +78,8 @@ const SearchResults = () => {
       travellers: 1,
       travelClass: 'Economy',
       startDate: '',
-      endDate: ''
+      endDate: '',
+      priceRange: [0, 50000]
     };
   };
 
@@ -85,6 +89,7 @@ const SearchResults = () => {
   const [travelClass] = useState(getSearchParams().travelClass);
   const [startDate] = useState(getSearchParams().startDate);
   const [endDate] = useState(getSearchParams().endDate);
+  const [priceRange] = useState(getSearchParams().priceRange);
 
   const [itinerary, setItinerary] = useState('');
   const [loading, setLoading] = useState(false);
@@ -115,7 +120,8 @@ const SearchResults = () => {
       travellers,
       travelClass,
       startDate,
-      endDate
+      endDate,
+      priceRange
     };
     
     // Store current search parameters for back navigation
@@ -232,9 +238,18 @@ const SearchResults = () => {
           return date;
         };
 
+        // Get user token for authentication
+        const userToken = localStorage.getItem('userToken');
+        const headers = { 'Content-Type': 'application/json' };
+        
+        // Add Authorization header if user is logged in
+        if (userToken) {
+          headers['Authorization'] = `Bearer ${userToken}`;
+        }
+        
         const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_ITINERARY), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             from,
             to,
@@ -242,6 +257,7 @@ const SearchResults = () => {
             returnDate: formatDateForAPI(endDate),
             travellers,
             travelClass,
+            priceRange,
           }),
         });
         
@@ -284,7 +300,7 @@ const SearchResults = () => {
     };
 
     generateItinerary();
-  }, [from, to, startDate, endDate, travellers, travelClass, navigate]); // Removed retryCount and retryDelay from dependencies
+  }, [from, to, startDate, endDate, travellers, travelClass, priceRange, navigate]); // Removed retryCount and retryDelay from dependencies
 
   // Fetch image for a place
   // Mobile detection
@@ -314,17 +330,10 @@ const SearchResults = () => {
       }
       
       const data = await res.json();
-      console.log('Place image API response:', data);
       
       if (data.imageUrl) {
-        // Log the image source for debugging
-        if (data.source) {
-          console.log(`📸 Image source: ${data.source} for ${place || destination}`);
-        }
-        
         // Use direct URL for better performance (no proxy needed for external images)
         const imageUrl = data.imageUrl.startsWith('http') ? data.imageUrl : `/api/proxy-image?url=${encodeURIComponent(data.imageUrl)}`;
-        console.log('Setting image URL:', imageUrl);
         setImageUrls(prev => ({ ...prev, [idx]: imageUrl }));
       } else {
         console.log('No image URL returned, using default');
@@ -447,9 +456,18 @@ const SearchResults = () => {
         return date;
       };
 
-              const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_ITINERARY), {
+      // Get user token for authentication
+      const userToken = localStorage.getItem('userToken');
+      const headers = { 'Content-Type': 'application/json' };
+      
+      // Add Authorization header if user is logged in
+      if (userToken) {
+        headers['Authorization'] = `Bearer ${userToken}`;
+      }
+      
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.GENERATE_ITINERARY), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           from,
           to,
@@ -457,6 +475,7 @@ const SearchResults = () => {
           returnDate: formatDateForAPI(endDate),
           travellers,
           travelClass,
+          priceRange,
         }),
       });
       
@@ -535,10 +554,38 @@ const SearchResults = () => {
   if (loading) {
     return (
       <PageWrapper className="fade-in">
-        <div className="text-center">
+        <div className="text-center" style={{ 
+          minHeight: '60vh', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          padding: '2rem'
+        }}>
           <div className="loading-spinner"></div>
-          <h2 className="section-title mt-4">Generating Your Perfect Itinerary</h2>
-          <p className="text-center">Please wait while our AI creates amazing travel plans for you...</p>
+          <h2 className="section-title mt-4" style={{
+            color: '#ffe066',
+            fontSize: '2rem',
+            fontWeight: 700,
+            marginBottom: '1rem',
+            fontFamily: 'Rajdhani, Orbitron, sans-serif',
+            textShadow: '0 0 20px rgba(255, 224, 102, 0.6)',
+            background: 'linear-gradient(135deg, #ffe066 0%, #ffd700 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
+            Generating Your Perfect Itinerary
+          </h2>
+          <p style={{
+            color: '#666',
+            fontSize: '1.1rem',
+            maxWidth: '500px',
+            lineHeight: 1.6,
+            margin: '0 auto'
+          }}>
+            Please wait while our AI creates amazing travel plans for you...
+          </p>
         </div>
       </PageWrapper>
     );
@@ -572,11 +619,23 @@ const SearchResults = () => {
             <h2 className="section-title text-left">Search Results</h2>
             <p className="mb-2">
               <strong>From:</strong> {from} | <strong>To:</strong> {to} | 
-              <strong> Travelers:</strong> {travellers} | <strong>Class:</strong> {travelClass}
+              <strong> Travelers:</strong> {travellers}
             </p>
             <p>
               <strong>Dates:</strong> {startDate} to {endDate}
             </p>
+            <div style={{
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+              marginTop: '12px',
+              textAlign: 'center'
+            }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#856404' }}>
+                💡 <strong>Note:</strong> All prices shown are estimates and may vary based on actual bookings, availability, and seasonal rates.
+              </p>
+            </div>
           </div>
           <button className="btn-secondary" onClick={handleNewSearch}>
             New Search

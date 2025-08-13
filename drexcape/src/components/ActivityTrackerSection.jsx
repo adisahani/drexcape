@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -45,6 +46,7 @@ import {
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
 const ActivityTrackerSection = () => {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -56,11 +58,20 @@ const ActivityTrackerSection = () => {
     deviceType: 'all'
   });
   const [exportDialog, setExportDialog] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalActivities, setTotalActivities] = useState(0);
+  const itemsPerPage = 20;
 
   useEffect(() => {
+    setCurrentPage(1); // Reset to first page when filters change
     fetchActivities();
     fetchStats();
   }, [filters]);
+
+  useEffect(() => {
+    fetchActivities();
+  }, [currentPage]);
 
   const fetchActivities = async () => {
     try {
@@ -68,7 +79,9 @@ const ActivityTrackerSection = () => {
       const queryParams = new URLSearchParams({
         type: filters.activityType,
         range: filters.dateRange,
-        device: filters.deviceType
+        device: filters.deviceType,
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString()
       });
 
       const response = await fetch(buildApiUrl(`${API_ENDPOINTS.ANALYTICS_ACTIVITY_FEED}?${queryParams}`), {
@@ -81,6 +94,8 @@ const ActivityTrackerSection = () => {
       
       const data = await response.json();
       setActivities(data.activities || []);
+      setTotalActivities(data.total || 0);
+      setTotalPages(Math.ceil((data.total || 0) / itemsPerPage));
     } catch (error) {
       console.error('Error fetching activities:', error);
       setError('Failed to load activities');
@@ -383,28 +398,54 @@ const ActivityTrackerSection = () => {
                       {activity.deviceInfo?.deviceType || 'Unknown'}
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ color: '#ffffff' }}>
-                    {activity.searchData && (
-                      <Typography variant="body2">
-                        {activity.searchData.from} → {activity.searchData.to}
-                      </Typography>
-                    )}
-                    {activity.formData && (
-                      <Typography variant="body2">
-                        {activity.formData.fields?.name} ({activity.formData.fields?.phone})
-                      </Typography>
-                    )}
-                    {activity.itineraryData && (
-                      <Typography variant="body2">
-                        {activity.itineraryData.itinerarySlug}
-                      </Typography>
-                    )}
-                    {activity.pageData && (
-                      <Typography variant="body2">
-                        {activity.pageData.pageTitle}
-                      </Typography>
-                    )}
-                  </TableCell>
+                                     <TableCell sx={{ color: '#ffffff' }}>
+                     {activity.searchData && (
+                       <Box>
+                         <Typography variant="body2" sx={{ mb: 0.5 }}>
+                           {activity.searchData.from} → {activity.searchData.to}
+                         </Typography>
+                         {activity.searchData.priceRange && (
+                           <Typography variant="caption" sx={{ color: '#ffe066', display: 'block' }}>
+                             💰 ₹{activity.searchData.priceRange.min?.toLocaleString()} - ₹{activity.searchData.priceRange.max?.toLocaleString()}
+                           </Typography>
+                         )}
+                         {activity.searchData.travellers && (
+                           <Typography variant="caption" sx={{ color: '#a084e8', display: 'block' }}>
+                             👥 {activity.searchData.travellers} traveller{activity.searchData.travellers > 1 ? 's' : ''}
+                           </Typography>
+                         )}
+                       </Box>
+                     )}
+                     {activity.formData && (
+                       <Typography variant="body2">
+                         {activity.formData.fields?.name} ({activity.formData.fields?.phone})
+                       </Typography>
+                     )}
+                     {activity.itineraryData && (
+                                               <Tooltip title="Click to view itinerary (opens in new tab)" arrow>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              cursor: 'pointer',
+                              color: '#ffe066',
+                              textDecoration: 'underline',
+                              '&:hover': {
+                                color: '#ffd700',
+                                textDecoration: 'none'
+                              }
+                            }}
+                            onClick={() => window.open(`/itinerary/${activity.itineraryData.itinerarySlug}`, '_blank')}
+                          >
+                            {activity.itineraryData.itinerarySlug}
+                          </Typography>
+                        </Tooltip>
+                     )}
+                     {activity.pageData && (
+                       <Typography variant="body2">
+                         {activity.pageData.pageTitle}
+                       </Typography>
+                     )}
+                   </TableCell>
                   <TableCell sx={{ color: '#ffffff' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                       <AccessTimeIcon sx={{ color: '#ffe066', fontSize: 16 }} />
@@ -423,8 +464,94 @@ const ActivityTrackerSection = () => {
               ))}
             </TableBody>
           </Table>
-        </TableContainer>
-      </Paper>
+                 </TableContainer>
+       </Paper>
+
+       {/* Pagination Controls */}
+       {totalPages > 1 && (
+         <Box sx={{ 
+           display: 'flex', 
+           justifyContent: 'space-between', 
+           alignItems: 'center', 
+           mt: 3,
+           p: 2,
+           background: 'linear-gradient(135deg, #1a0033 0%, #3a006a 100%)',
+           border: '1px solid rgba(255, 224, 102, 0.3)',
+           borderRadius: 1
+         }}>
+           <Typography variant="body2" sx={{ color: '#ffe066' }}>
+             Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalActivities)} of {totalActivities} activities
+           </Typography>
+           
+           <Box sx={{ display: 'flex', gap: 1 }}>
+             <Button
+               variant="outlined"
+               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+               disabled={currentPage === 1}
+               sx={{
+                 color: '#ffe066',
+                 borderColor: '#ffe066',
+                 '&:hover': {
+                   borderColor: '#ffd700',
+                   backgroundColor: 'rgba(255, 224, 102, 0.1)'
+                 },
+                 '&:disabled': {
+                   color: 'rgba(255, 224, 102, 0.3)',
+                   borderColor: 'rgba(255, 224, 102, 0.3)'
+                 }
+               }}
+             >
+               Previous
+             </Button>
+             
+             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+               {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                 const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                 return (
+                   <Button
+                     key={pageNum}
+                     variant={currentPage === pageNum ? "contained" : "outlined"}
+                     onClick={() => setCurrentPage(pageNum)}
+                     sx={{
+                       minWidth: '40px',
+                       height: '40px',
+                       color: currentPage === pageNum ? '#1a0033' : '#ffe066',
+                       backgroundColor: currentPage === pageNum ? '#ffe066' : 'transparent',
+                       borderColor: '#ffe066',
+                       '&:hover': {
+                         backgroundColor: currentPage === pageNum ? '#ffd700' : 'rgba(255, 224, 102, 0.1)',
+                         borderColor: '#ffd700'
+                       }
+                     }}
+                   >
+                     {pageNum}
+                   </Button>
+                 );
+               })}
+             </Box>
+             
+             <Button
+               variant="outlined"
+               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+               disabled={currentPage === totalPages}
+               sx={{
+                 color: '#ffe066',
+                 borderColor: '#ffe066',
+                 '&:hover': {
+                   borderColor: '#ffd700',
+                   backgroundColor: 'rgba(255, 224, 102, 0.1)'
+                 },
+                 '&:disabled': {
+                   color: 'rgba(255, 224, 102, 0.3)',
+                   borderColor: 'rgba(255, 224, 102, 0.3)'
+                 }
+               }}
+             >
+               Next
+             </Button>
+           </Box>
+         </Box>
+       )}
 
       {/* Filter Dialog */}
       <Dialog 

@@ -20,7 +20,18 @@ import {
   CircularProgress,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Switch,
+  FormControlLabel,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails
 } from '@mui/material';
 import {
   TrendingUp,
@@ -28,7 +39,10 @@ import {
   Speed,
   AttachMoney,
   CheckCircle,
-  Error
+  Error,
+  ExpandMore,
+  Visibility,
+  Code
 } from '@mui/icons-material';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
@@ -38,10 +52,21 @@ const AIUsageSection = () => {
   const [stats, setStats] = useState(null);
   const [period, setPeriod] = useState('7d');
   const [activeTab, setActiveTab] = useState(0);
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [includeData, setIncludeData] = useState(false);
+  const [selectedLog, setSelectedLog] = useState(null);
+  const [logDialogOpen, setLogDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchAIUsageStats();
   }, [period]);
+
+  useEffect(() => {
+    if (activeTab === 2) {
+      fetchAIUsageLogs();
+    }
+  }, [activeTab, includeData]);
 
   const fetchAIUsageStats = async () => {
     try {
@@ -80,6 +105,56 @@ const AIUsageSection = () => {
     }
   };
 
+  const fetchAIUsageLogs = async () => {
+    try {
+      setLogsLoading(true);
+      const token = localStorage.getItem('adminToken');
+      
+      const response = await fetch(
+        buildApiUrl(`/api/admin/dashboard/ai-usage/logs?includeData=${includeData}&limit=100`),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setLogs(data.logs || []);
+      } else {
+        console.error('Failed to fetch AI usage logs');
+      }
+    } catch (err) {
+      console.error('Error fetching AI usage logs:', err);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const fetchLogDetails = async (logId) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      const response = await fetch(
+        buildApiUrl(`/api/admin/dashboard/ai-usage/logs/${logId}`),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedLog(data.log);
+        setLogDialogOpen(true);
+      }
+    } catch (err) {
+      console.error('Error fetching log details:', err);
+    }
+  };
+
   const formatNumber = (num) => {
     return new Intl.NumberFormat().format(num);
   };
@@ -98,6 +173,14 @@ const AIUsageSection = () => {
 
   const getStatusColor = (status) => {
     return status === 'success' ? 'success' : 'error';
+  };
+
+  const formatJSON = (data) => {
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch (e) {
+      return String(data);
+    }
   };
 
   if (loading) {
@@ -152,28 +235,26 @@ const AIUsageSection = () => {
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box display="flex" alignItems="center">
-                <TrendingUp color="primary" sx={{ mr: 2 }} />
+              <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography color="textSecondary" gutterBottom variant="body2">
+                  <Typography color="textSecondary" gutterBottom variant="overline">
                     Total Requests
                   </Typography>
                   <Typography variant="h4">
                     {formatNumber(overallStats.totalRequests)}
                   </Typography>
                 </Box>
+                <TrendingUp color="primary" />
               </Box>
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box display="flex" alignItems="center">
-                <CheckCircle color="success" sx={{ mr: 2 }} />
+              <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography color="textSecondary" gutterBottom variant="body2">
+                  <Typography color="textSecondary" gutterBottom variant="overline">
                     Success Rate
                   </Typography>
                   <Typography variant="h4">
@@ -183,53 +264,53 @@ const AIUsageSection = () => {
                     }
                   </Typography>
                 </Box>
+                <CheckCircle color="success" />
               </Box>
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box display="flex" alignItems="center">
-                <Speed color="info" sx={{ mr: 2 }} />
+              <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography color="textSecondary" gutterBottom variant="body2">
+                  <Typography color="textSecondary" gutterBottom variant="overline">
                     Avg Response Time
                   </Typography>
                   <Typography variant="h4">
                     {formatTime(overallStats.avgResponseTime)}
                   </Typography>
                 </Box>
+                <Speed color="info" />
               </Box>
             </CardContent>
           </Card>
         </Grid>
-
         <Grid item xs={12} sm={6} md={3}>
           <Card>
             <CardContent>
-              <Box display="flex" alignItems="center">
-                <AttachMoney color="warning" sx={{ mr: 2 }} />
+              <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Box>
-                  <Typography color="textSecondary" gutterBottom variant="body2">
+                  <Typography color="textSecondary" gutterBottom variant="overline">
                     Total Cost
                   </Typography>
                   <Typography variant="h4">
                     {formatCurrency(overallStats.totalCost)}
                   </Typography>
                 </Box>
+                <AttachMoney color="warning" />
               </Box>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Tabs for different views */}
+      {/* Tabs */}
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
-          <Tab label="Endpoint Breakdown" />
+          <Tab label="Endpoint Stats" />
           <Tab label="Recent Activity" />
+          <Tab label="Detailed Logs" />
         </Tabs>
       </Box>
 
@@ -317,6 +398,179 @@ const AIUsageSection = () => {
           </Table>
         </TableContainer>
       )}
+
+      {activeTab === 2 && (
+        <Box>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={includeData}
+                  onChange={(e) => setIncludeData(e.target.checked)}
+                />
+              }
+              label="Include Complete Input/Output Data"
+            />
+            <Button
+              variant="outlined"
+              onClick={fetchAIUsageLogs}
+              disabled={logsLoading}
+            >
+              Refresh
+            </Button>
+          </Box>
+
+          {logsLoading ? (
+            <Box display="flex" justifyContent="center" p={3}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Endpoint</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Response Time</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {logs.map((log) => (
+                    <TableRow key={log._id}>
+                      <TableCell>{log.endpoint}</TableCell>
+                      <TableCell>
+                        <Chip 
+                          label={log.responseStatus} 
+                          color={getStatusColor(log.responseStatus)}
+                          size="small"
+                        />
+                      </TableCell>
+                      <TableCell>{formatTime(log.responseTime)}</TableCell>
+                      <TableCell>
+                        {new Date(log.createdAt).toLocaleString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          startIcon={<Visibility />}
+                          onClick={() => fetchLogDetails(log._id)}
+                        >
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
+      )}
+
+      {/* Log Details Dialog */}
+      <Dialog
+        open={logDialogOpen}
+        onClose={() => setLogDialogOpen(false)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>
+          AI Usage Log Details
+          <Typography variant="body2" color="textSecondary">
+            {selectedLog?.endpoint} - {new Date(selectedLog?.createdAt).toLocaleString()}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {selectedLog && (
+            <Box>
+              <Accordion defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="h6">Request Data (Input)</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <TextField
+                    fullWidth
+                    multiline
+                    rows={10}
+                    value={formatJSON(selectedLog.requestData)}
+                    variant="outlined"
+                    InputProps={{
+                      readOnly: true,
+                      style: { fontFamily: 'monospace', fontSize: '12px' }
+                    }}
+                  />
+                </AccordionDetails>
+              </Accordion>
+
+              <Accordion>
+                <AccordionSummary expandIcon={<ExpandMore />}>
+                  <Typography variant="h6">Response Details</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Grid container spacing={2}>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2">Status:</Typography>
+                      <Chip 
+                        label={selectedLog.responseStatus} 
+                        color={getStatusColor(selectedLog.responseStatus)}
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2">Response Time:</Typography>
+                      <Typography>{formatTime(selectedLog.responseTime)}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2">Tokens Used:</Typography>
+                      <Typography>{formatNumber(selectedLog.tokensUsed)}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="subtitle2">Cost:</Typography>
+                      <Typography>{formatCurrency(selectedLog.cost)}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2">IP Address:</Typography>
+                      <Typography>{selectedLog.ipAddress || 'N/A'}</Typography>
+                    </Grid>
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2">User Agent:</Typography>
+                      <Typography variant="body2" sx={{ wordBreak: 'break-all' }}>
+                        {selectedLog.userAgent || 'N/A'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </AccordionDetails>
+              </Accordion>
+
+              {selectedLog.responseData && Object.keys(selectedLog.responseData).length > 0 && (
+                <Accordion>
+                  <AccordionSummary expandIcon={<ExpandMore />}>
+                    <Typography variant="h6">Response Data (Output)</Typography>
+                  </AccordionSummary>
+                  <AccordionDetails>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={15}
+                      value={formatJSON(selectedLog.responseData)}
+                      variant="outlined"
+                      InputProps={{
+                        readOnly: true,
+                        style: { fontFamily: 'monospace', fontSize: '12px' }
+                      }}
+                    />
+                  </AccordionDetails>
+                </Accordion>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLogDialogOpen(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

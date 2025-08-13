@@ -9,6 +9,7 @@ import BlogDetail from './components/BlogDetail';
 import AdminBlogManager from './components/AdminBlogManager';
 import Layout from './components/Layout';
 import HomePage from './components/HomePage';
+import ContactPage from './components/ContactPage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function AppContent() {
@@ -33,6 +34,7 @@ function AppContent() {
           <Route path="itinerary/:slug" element={<ItineraryDetailPage />} />
           <Route path="blog" element={<BlogList />} />
           <Route path="blog/:slug" element={<BlogDetail />} />
+          <Route path="contact" element={<ContactPage />} />
           <Route path="admin-blogs" element={
             isAdminLoggedIn ? (
               <AdminBlogManager />

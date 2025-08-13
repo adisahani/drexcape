@@ -3,7 +3,7 @@ import drexcapeLogo from '../assets/drexcape-logo.png';
 import UserProfile from './UserProfile';
 import UserLogin from './UserLogin';
 import { Avatar, IconButton, Menu, MenuItem, Typography, Box, Drawer, List, ListItem, ListItemText, Divider } from '@mui/material';
-import { Person as PersonIcon, AccountCircle as AccountCircleIcon, Menu as MenuIcon, Close as CloseIcon, Home as HomeIcon, Explore as ExploreIcon, Category as CategoryIcon, LocalOffer as OfferIcon, Article as BlogIcon, ContactSupport as ContactIcon } from '@mui/icons-material';
+import { Person as PersonIcon, AccountCircle as AccountCircleIcon, Menu as MenuIcon, Close as CloseIcon, Home as HomeIcon, Article as BlogIcon, ContactSupport as ContactIcon } from '@mui/icons-material';
 
 const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -63,11 +63,8 @@ const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
   // Navigation items
   const navItems = [
     { text: 'Home', href: '/', icon: <HomeIcon /> },
-    { text: 'Destinations', href: '/#destinations', icon: <ExploreIcon /> },
-    { text: 'Categories', href: '/#categories', icon: <CategoryIcon /> },
-    { text: 'Offers', href: '/#offers', icon: <OfferIcon /> },
     { text: 'Blog', href: '/blog', icon: <BlogIcon /> },
-    { text: 'Contact', href: '/#contact', icon: <ContactIcon /> },
+    { text: 'Contact', href: '/contact', icon: <ContactIcon /> },
   ];
 
   const handleNavClick = (href) => {

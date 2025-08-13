@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
   POPULAR_SEARCHES: '/api/itineraries/popular/searches',
   ITINERARY_DETAILS: (slug) => `/api/itineraries/${slug}`,
   ITINERARY_DETAILS_BY_ID: (id) => `/api/itinerary-details/${id}`,
+  GENERATE_DETAILED_ITINERARY: (id) => `/api/itinerary/${id}/generate-details`,
   
   // Blog endpoints
   BLOGS_PUBLISHED: '/api/blogs/published',
@@ -55,4 +56,10 @@ export const API_ENDPOINTS = {
   // Place images
   PLACE_IMAGE: '/api/place-image',
   DESTINATION_GALLERY: '/api/destination-gallery',
+  
+  // Search history
+  SEARCH_HISTORY: (userId) => `/api/search-history/${userId}`,
+  SAVE_SEARCH_HISTORY: '/api/search-history',
+  DELETE_SEARCH_HISTORY: (id) => `/api/search-history/${id}`,
+  CLEAR_SEARCH_HISTORY: (userId) => `/api/search-history/user/${userId}`,
 }; 

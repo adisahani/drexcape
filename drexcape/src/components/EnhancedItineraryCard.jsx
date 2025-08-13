@@ -112,21 +112,54 @@ const EnhancedItineraryCard = ({
 
       <div className="result-card-content">
         <div className="result-card-header">
-          <h3 className="result-card-title">{itinerary.packageName}</h3>
-          <span className="result-card-days">{itinerary.days} Days</span>
+          <h3 className="result-card-title">{itinerary.packageName || itinerary.title}</h3>
+          <span className="result-card-days">{itinerary.duration || `${itinerary.days} Days`}</span>
         </div>
         
         <div className="result-card-details">
-          <p><strong>Destinations:</strong> {itinerary.destinations?.join(', ')}</p>
-          <p><strong>Price:</strong> ₹{itinerary.price?.toLocaleString()}</p>
-          <div>
-            <strong>Highlights:</strong>
-            <ul>
-              {itinerary.highlights?.slice(0, 3).map((highlight, idx) => (
-                <li key={idx}>{highlight}</li>
-              ))}
-            </ul>
-          </div>
+          {/* Professional package structure */}
+          {itinerary.pricePP ? (
+            <>
+              <p><strong>Expected Price:</strong> ₹{itinerary.pricePP?.toLocaleString()}/person</p>
+              {itinerary.hotelExample?.name && (
+                <p><strong>Hotel:</strong> {itinerary.hotelExample.name} ({itinerary.hotelExample.type})</p>
+              )}
+              {itinerary.topAttractions && itinerary.topAttractions.length > 0 && (
+                <div>
+                  <strong>Top Attractions:</strong>
+                  <ul>
+                    {itinerary.topAttractions.slice(0, 3).map((attraction, idx) => (
+                      <li key={idx}>{attraction}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {itinerary.inclusions && itinerary.inclusions.length > 0 && (
+                <div>
+                  <strong>Included:</strong>
+                  <ul>
+                    {itinerary.inclusions.slice(0, 2).map((inclusion, idx) => (
+                      <li key={idx}>{inclusion}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : (
+            /* Fallback to old structure */
+            <>
+              <p><strong>Destinations:</strong> {itinerary.destinations?.join(', ')}</p>
+              <p><strong>Expected Price:</strong> ₹{itinerary.price?.toLocaleString()}</p>
+              <div>
+                <strong>Highlights:</strong>
+                <ul>
+                  {itinerary.highlights?.slice(0, 3).map((highlight, idx) => (
+                    <li key={idx}>{highlight}</li>
+                  ))}
+                </ul>
+              </div>
+            </>
+          )}
         </div>
         
         <button 

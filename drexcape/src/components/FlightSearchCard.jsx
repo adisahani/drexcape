@@ -11,7 +11,6 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
   const [from, setFrom] = React.useState('');
   const [to, setTo] = React.useState('');
   const [travellers, setTravellers] = React.useState(1);
-  const [travelClass, setTravelClass] = React.useState('Economy');
   const [range, setRange] = React.useState([
     {
       startDate: new Date(),
@@ -21,6 +20,8 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
   ]);
   const [showCalendar, setShowCalendar] = React.useState(false);
   const [validationError, setValidationError] = React.useState('');
+  const [priceRange, setPriceRange] = React.useState([0, 50000]);
+  const [showPriceFilter, setShowPriceFilter] = React.useState(false);
 
   // Sample airport list
   const airportOptions = [
@@ -64,11 +65,11 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
       from,
       to,
       travellers,
-      travelClass,
       departureDate: range[0].startDate,
       returnDate: range[0].endDate,
       startDate: range[0].startDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
       endDate: range[0].endDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }),
+      priceRange,
     };
 
     if (onSearchWithUserData) {
@@ -90,16 +91,6 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
     if (validationError) setValidationError('');
   };
 
-  const handleFromSelect = (opt) => {
-    setFrom(`${opt.city} (${opt.code})`);
-    if (validationError) setValidationError('');
-  };
-
-  const handleToSelect = (opt) => {
-    setTo(`${opt.city} (${opt.code})`);
-    if (validationError) setValidationError('');
-  };
-
   return (
     <div className="flight-search-card">
       {/* From/To Inputs with overlapping swap button */}
@@ -111,7 +102,6 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
             onChange={handleFromChange}
             placeholder="From"
             options={airportOptions}
-            onSelect={handleFromSelect}
           />
         </div>
         <button className="swap-btn overlap-swap-btn" aria-label="Swap From and To" onClick={() => { const temp = from; setFrom(to); setTo(temp); }}>
@@ -124,7 +114,6 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
             onChange={handleToChange}
             placeholder="To"
             options={airportOptions}
-            onSelect={handleToSelect}
           />
         </div>
       </div>
@@ -155,10 +144,160 @@ const FlightSearchCard = ({ onSearchWithUserData }) => {
         <TravellersClassSelector
           travellers={travellers}
           setTravellers={setTravellers}
-          travelClass={travelClass}
-          setTravelClass={setTravelClass}
         />
       </div>
+
+      {/* Price Range Filter */}
+      <div className="price-filter-section">
+        <div style={{
+          background: 'rgba(255,255,255,0.22)',
+          border: '1px solid rgba(255,255,255,0.18)',
+          borderRadius: '12px',
+          padding: '12px 16px',
+          backdropFilter: 'blur(10px)',
+          minHeight: '52px'
+        }}>
+          {/* Header */}
+          <div style={{ 
+            color: '#ffe066', 
+            fontSize: '0.9rem', 
+            fontWeight: 600,
+            marginBottom: '8px'
+          }}>
+            Price Range
+          </div>
+          
+          {/* Quick Preset Pills */}
+          <div style={{
+            display: 'flex',
+            gap: '6px',
+            marginBottom: '12px',
+            flexWrap: 'wrap'
+          }}>
+            {[
+              { label: 'Budget', range: [0, 25000] },
+              { label: 'Mid', range: [25000, 50000] },
+              { label: 'Premium', range: [50000, 100000] },
+              { label: 'Luxury', range: [100000, 200000] }
+            ].map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => setPriceRange(preset.range)}
+                style={{
+                  background: priceRange[0] === preset.range[0] && priceRange[1] === preset.range[1]
+                    ? 'rgba(255, 230, 102, 0.9)'
+                    : 'rgba(255, 255, 255, 0.2)',
+                  color: priceRange[0] === preset.range[0] && priceRange[1] === preset.range[1]
+                    ? '#2a0140'
+                    : '#fff',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  borderRadius: '16px',
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  whiteSpace: 'nowrap'
+                }}
+                onMouseEnter={(e) => {
+                  if (!(priceRange[0] === preset.range[0] && priceRange[1] === preset.range[1])) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!(priceRange[0] === preset.range[0] && priceRange[1] === preset.range[1])) {
+                    e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                  }
+                }}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Horizontal Slider */}
+          <div style={{ position: 'relative', marginBottom: '8px' }}>
+            {/* Track */}
+            <div style={{
+              height: '4px',
+              background: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: '2px',
+              position: 'relative'
+            }}>
+              {/* Progress */}
+              <div style={{
+                position: 'absolute',
+                left: `${(priceRange[0] / 200000) * 100}%`,
+                width: `${((priceRange[1] - priceRange[0]) / 200000) * 100}%`,
+                height: '4px',
+                background: 'linear-gradient(90deg, #ffe066 0%, #ffd700 100%)',
+                borderRadius: '2px'
+              }} />
+            </div>
+            
+            {/* Dual Range Inputs */}
+            <input
+              type="range"
+              min="0"
+              max="200000"
+              step="5000"
+              value={priceRange[0]}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value < priceRange[1]) {
+                  setPriceRange([value, priceRange[1]]);
+                }
+              }}
+              style={{
+                position: 'absolute',
+                top: '-6px',
+                width: '100%',
+                height: '16px',
+                background: 'transparent',
+                outline: 'none',
+                appearance: 'none',
+                cursor: 'pointer'
+              }}
+            />
+            
+            <input
+              type="range"
+              min="0"
+              max="200000"
+              step="5000"
+              value={priceRange[1]}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value > priceRange[0]) {
+                  setPriceRange([priceRange[0], value]);
+                }
+              }}
+              style={{
+                position: 'absolute',
+                top: '-6px',
+                width: '100%',
+                height: '16px',
+                background: 'transparent',
+                outline: 'none',
+                appearance: 'none',
+                cursor: 'pointer'
+              }}
+            />
+          </div>
+
+          {/* Dynamic Price Display */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center',
+            fontSize: '0.8rem',
+            color: '#ffe066',
+            fontWeight: 600
+          }}>
+            ₹{priceRange[0].toLocaleString()} - ₹{priceRange[1].toLocaleString()}
+          </div>
+        </div>
+      </div>
+
       {/* Search Button */}
       <div className="search-btn-section">
         <button 

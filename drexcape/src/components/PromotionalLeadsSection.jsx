@@ -45,16 +45,25 @@ const PromotionalLeadsSection = () => {
   const [error, setError] = useState('');
   const [editDialog, setEditDialog] = useState({ open: false, lead: null });
   const [editForm, setEditForm] = useState({ status: '', notes: '' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalLeads, setTotalLeads] = useState(0);
+  const itemsPerPage = 20;
 
   useEffect(() => {
     fetchLeads();
     fetchStats();
-  }, []);
+  }, [currentPage]);
 
   const fetchLeads = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.PROMOTIONAL_LEADS), {
+      const queryParams = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString()
+      });
+
+      const response = await fetch(buildApiUrl(`${API_ENDPOINTS.PROMOTIONAL_LEADS}?${queryParams}`), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -63,7 +72,9 @@ const PromotionalLeadsSection = () => {
       if (!response.ok) throw new Error('Failed to fetch leads');
       
       const data = await response.json();
-      setLeads(data);
+      setLeads(data.leads || data || []);
+      setTotalLeads(data.total || data.length || 0);
+      setTotalPages(Math.ceil((data.total || data.length || 0) / itemsPerPage));
     } catch (error) {
       console.error('Error fetching leads:', error);
       setError('Failed to load leads');
@@ -300,6 +311,92 @@ const PromotionalLeadsSection = () => {
           </Table>
         </TableContainer>
       </Paper>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          mt: 3,
+          p: 2,
+          background: 'linear-gradient(135deg, #1a0033 0%, #3a006a 100%)',
+          border: '1px solid rgba(255, 224, 102, 0.3)',
+          borderRadius: 1
+        }}>
+          <Typography variant="body2" sx={{ color: '#ffe066' }}>
+            Showing {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalLeads)} of {totalLeads} leads
+          </Typography>
+          
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              sx={{
+                color: '#ffe066',
+                borderColor: '#ffe066',
+                '&:hover': {
+                  borderColor: '#ffd700',
+                  backgroundColor: 'rgba(255, 224, 102, 0.1)'
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 224, 102, 0.3)',
+                  borderColor: 'rgba(255, 224, 102, 0.3)'
+                }
+              }}
+            >
+              Previous
+            </Button>
+            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "contained" : "outlined"}
+                    onClick={() => setCurrentPage(pageNum)}
+                    sx={{
+                      minWidth: '40px',
+                      height: '40px',
+                      color: currentPage === pageNum ? '#1a0033' : '#ffe066',
+                      backgroundColor: currentPage === pageNum ? '#ffe066' : 'transparent',
+                      borderColor: '#ffe066',
+                      '&:hover': {
+                        backgroundColor: currentPage === pageNum ? '#ffd700' : 'rgba(255, 224, 102, 0.1)',
+                        borderColor: '#ffd700'
+                      }
+                    }}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </Box>
+            
+            <Button
+              variant="outlined"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+              sx={{
+                color: '#ffe066',
+                borderColor: '#ffe066',
+                '&:hover': {
+                  borderColor: '#ffd700',
+                  backgroundColor: 'rgba(255, 224, 102, 0.1)'
+                },
+                '&:disabled': {
+                  color: 'rgba(255, 224, 102, 0.3)',
+                  borderColor: 'rgba(255, 224, 102, 0.3)'
+                }
+              }}
+            >
+              Next
+            </Button>
+          </Box>
+        </Box>
+      )}
 
       {/* Edit Dialog */}
       <Dialog 
