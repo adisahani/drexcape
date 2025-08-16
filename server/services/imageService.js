@@ -92,8 +92,13 @@ class ImageService {
 
         if (detailsResponse.data.result?.photos?.length) {
           const photoRef = detailsResponse.data.result.photos[0].photo_reference;
-          // Always use production URL for deployed version
-          const photoUrl = `https://drexcape.onrender.com/api/proxy-google-image?photoreference=${photoRef}&maxwidth=${maxWidth}&key=${GOOGLE_PLACES_API_KEY}`;
+          
+          // Use dynamic URL based on environment
+          const baseUrl = process.env.NODE_ENV === 'production' || process.env.RENDER 
+            ? 'https://drexcape.onrender.com' 
+            : `http://localhost:${process.env.PORT || 3001}`;
+          
+          const photoUrl = `${baseUrl}/api/proxy-google-image?photoreference=${photoRef}&maxwidth=${maxWidth}&key=${GOOGLE_PLACES_API_KEY}`;
           
           console.log(`✅ Google Places photo found for: ${placeQuery} (${place.name})`);
           return photoUrl;

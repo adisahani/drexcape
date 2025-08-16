@@ -152,6 +152,13 @@ app.get('/api/proxy-image', async (req, res) => {
   }
 });
 
+// Helper function to get the correct base URL for image proxy
+function getImageProxyBaseUrl() {
+  return process.env.NODE_ENV === 'production' || process.env.RENDER 
+    ? 'https://drexcape.onrender.com' 
+    : `http://localhost:${process.env.PORT || 3001}`;
+}
+
 // Google Places image proxy endpoint
 app.get('/api/proxy-google-image', async (req, res) => {
   try {
@@ -1486,7 +1493,7 @@ Return ONLY valid JSON. No explanations.`;
             if (placeResult.photos && placeResult.photos.length > 0) {
               const photo = placeResult.photos[0];
               const photoReference = photo.photo_reference;
-              const hotelImageUrl = `http://localhost:${process.env.PORT || 3001}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=800&maxheight=600&key=${GOOGLE_PLACES_API_KEY}`;
+              const hotelImageUrl = `${getImageProxyBaseUrl()}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=800&maxheight=600&key=${GOOGLE_PLACES_API_KEY}`;
               
               // Add image URL to accommodation data
               detailedData.accommodation.imageUrl = hotelImageUrl;
@@ -1871,7 +1878,7 @@ app.get('/api/place-image', trackAIUsage('place-image'), async (req, res) => {
           const photoReference = photo.photo_reference;
           
           // Get the photo using Google Places Photo API - proxy through our server to avoid CORS issues
-          const photoUrl = `http://localhost:${process.env.PORT || 3001}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=${isMobile ? 400 : 800}&maxheight=${isMobile ? 300 : 600}&key=${GOOGLE_PLACES_API_KEY}`;
+          const photoUrl = `${getImageProxyBaseUrl()}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=${isMobile ? 400 : 800}&maxheight=${isMobile ? 300 : 600}&key=${GOOGLE_PLACES_API_KEY}`;
           
           console.log('Found Google Places image:', photoUrl);
           
@@ -2219,7 +2226,7 @@ app.get('/api/destination-gallery', trackAIUsage('destination-gallery'), async (
                     const photoReference = photo.photo_reference;
                     
                     // Create proxy URL
-                    const candidateUrl = `http://localhost:${process.env.PORT || 3001}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=800&maxheight=600&key=${GOOGLE_PLACES_API_KEY}`;
+                    const candidateUrl = `${getImageProxyBaseUrl()}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=800&maxheight=600&key=${GOOGLE_PLACES_API_KEY}`;
                     
                                          // Check if this URL is different from previously used ones
                      if (!usedImageUrls.has(candidateUrl)) {
@@ -2289,7 +2296,7 @@ app.get('/api/destination-gallery', trackAIUsage('destination-gallery'), async (
               const photoReference = photo.photo_reference;
               
               // Create proxy URL
-              imageUrl = `http://localhost:${process.env.PORT || 3001}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=800&maxheight=600&key=${GOOGLE_PLACES_API_KEY}`;
+              imageUrl = `${getImageProxyBaseUrl()}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=800&maxheight=600&key=${GOOGLE_PLACES_API_KEY}`;
               source = 'google_places';
               console.log(`✅ Google Places image ${i + 1} found:`, imageUrl);
             }
@@ -2406,7 +2413,7 @@ app.get('/api/test-google-places', async (req, res) => {
         const photoReference = photo.photo_reference;
         
         // Get the photo URL - proxy through our server to avoid CORS issues
-        const photoUrl = `http://localhost:${process.env.PORT || 3001}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=400&maxheight=300&key=${GOOGLE_PLACES_API_KEY}`;
+        const photoUrl = `${getImageProxyBaseUrl()}/api/proxy-google-image?photoreference=${photoReference}&maxwidth=400&maxheight=300&key=${GOOGLE_PLACES_API_KEY}`;
         
         // Image source: google_places for debugging (commented out to reduce console noise)
         
