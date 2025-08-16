@@ -119,6 +119,7 @@ const itineraryRoutes = require('./routes/itineraries');
 const promotionalLeadsRoutes = require('./routes/promotionalLeads');
 const blogRoutes = require('./routes/blogs');
 const analyticsRoutes = require('./routes/analytics');
+const packageRoutes = require('./routes/packages');
 const proxy = require('express-http-proxy');
 
 // Simple image proxy endpoint
@@ -2481,6 +2482,9 @@ app.use('/api/promotional-leads', promotionalLeadsRoutes);
 
 // Blog routes
 app.use('/api/blogs', blogRoutes);
+
+// Package routes
+app.use('/api/packages', packageRoutes);
 
 // Analytics routes
 app.use('/api/analytics', analyticsRoutes);

@@ -38,6 +38,20 @@ export const API_ENDPOINTS = {
   BLOG_CATEGORIES: '/api/blogs/categories/list',
   BLOG_SHARE: (blogId) => `/api/blogs/${blogId}/share`,
   
+  // Package endpoints
+  PACKAGES_PUBLISHED: '/api/packages/published',
+  PACKAGE_DETAIL: (slug) => `/api/packages/${slug}`,
+  PACKAGE_CATEGORIES: '/api/packages/categories/list',
+  PACKAGES_FEATURED: '/api/packages/featured/list',
+  PACKAGE_BOOK: '/api/packages/book',
+  
+  // Booking management endpoints
+  BOOKINGS_ALL: '/api/packages/admin/bookings',
+  BOOKINGS_STATS: '/api/packages/admin/bookings/stats',
+  BOOKING_DETAIL: (id) => `/api/packages/admin/bookings/${id}`,
+  BOOKING_STATUS: (id) => `/api/packages/admin/bookings/${id}/status`,
+  BOOKING_CONTACT: (id) => `/api/packages/admin/bookings/${id}/contact`,
+  
   // User endpoints
   USER_LOGIN: '/api/users/login',
   USER_REGISTER: '/api/users/register',

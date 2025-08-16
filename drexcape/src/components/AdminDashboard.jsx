@@ -28,13 +28,17 @@ import {
   Notifications as NotificationsIcon,
   Person as PersonIcon,
   Article as ArticleIcon,
-  Timeline as TimelineIcon
+  Timeline as TimelineIcon,
+  Inventory as InventoryIcon,
+  BookOnline as BookingIcon
 } from '@mui/icons-material';
 import AIUsageSection from './AIUsageSection';
 import DashboardOverview from './DashboardOverview';
 import AdminSettings from './AdminSettings';
 import PromotionalLeadsSection from './PromotionalLeadsSection';
 import AdminBlogManager from './AdminBlogManager';
+import AdminPackageManager from './AdminPackageManager';
+import BookingManager from './BookingManager';
 import ActivityTrackerSection from './ActivityTrackerSection';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -75,8 +79,10 @@ const AdminDashboard = () => {
     { text: 'Dashboard', icon: <DashboardIcon />, value: 'dashboard' },
     { text: 'Activity Tracker', icon: <TimelineIcon />, value: 'activity-tracker' },
     { text: 'Promotional Leads', icon: <PersonIcon />, value: 'promotional-leads' },
-    { text: 'Settings', icon: <SettingsIcon />, value: 'settings' },
-    { text: 'Blog Management', icon: <ArticleIcon />, value: 'blog-management' }
+    { text: 'Blog Management', icon: <ArticleIcon />, value: 'blog-management' },
+    { text: 'Package Management', icon: <InventoryIcon />, value: 'package-management' },
+    { text: 'Booking Management', icon: <BookingIcon />, value: 'booking-management' },
+    { text: 'Settings', icon: <SettingsIcon />, value: 'settings' }
   ];
 
   const drawer = (
@@ -116,10 +122,14 @@ const AdminDashboard = () => {
         return <ActivityTrackerSection />;
       case 'promotional-leads':
         return <PromotionalLeadsSection />;
-      case 'settings':
-        return <AdminSettings />;
       case 'blog-management':
         return <AdminBlogManager />;
+      case 'package-management':
+        return <AdminPackageManager />;
+      case 'booking-management':
+        return <BookingManager />;
+      case 'settings':
+        return <AdminSettings />;
       default:
         return <AIUsageSection />;
     }

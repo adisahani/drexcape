@@ -25,6 +25,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 import PromotionalPopup from './PromotionalPopup';
+import FeaturedPackages from './FeaturedPackages';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -176,62 +177,7 @@ function ParallaxClouds() {
   );
 }
 
-function PopularDestinationsSlider() {
-  const destinations = [
-    { id: 1, title: "Forest Wild Life", location: "NRT, Indonesia", rating: "4.7", image: cardImage1 },
-    { id: 2, title: "Beach Paradise", location: "Bali, Indonesia", rating: "4.9", image: cardImage2 },
-    { id: 3, title: "Mountain Retreat", location: "Swiss Alps", rating: "4.8", image: cardImage1 },
-    { id: 4, title: "City Adventure", location: "Tokyo, Japan", rating: "4.6", image: cardImage2 },
-    { id: 5, title: "Desert Safari", location: "Dubai, UAE", rating: "4.5", image: cardImage1 },
-    { id: 6, title: "Island Escape", location: "Maldives", rating: "4.9", image: cardImage2 },
-    { id: 7, title: "Cultural Heritage", location: "Kyoto, Japan", rating: "4.7", image: cardImage1 },
-    { id: 8, title: "Adventure Trail", location: "Nepal", rating: "4.8", image: cardImage2 }
-  ];
 
-  return (
-    <Swiper
-      modules={[Navigation, Pagination, A11y, Autoplay]}
-      loop={true}
-      navigation
-      pagination={{ clickable: true }}
-      autoplay={{ delay: 3000, disableOnInteraction: false }}
-      spaceBetween={20}
-      slidesPerView={'auto'}
-      centeredSlides={true}
-      breakpoints={{
-        320: { slidesPerView: 1, spaceBetween: 20, centeredSlides: true },
-        480: { slidesPerView: 1, spaceBetween: 20, centeredSlides: true },
-        768: { slidesPerView: 2, spaceBetween: 20, centeredSlides: true },
-        1024: { slidesPerView: 3, spaceBetween: 20, centeredSlides: true },
-        1200: { slidesPerView: 4, spaceBetween: 20, centeredSlides: true }
-      }}
-      style={{ 
-        visibility: 'visible', 
-        opacity: 1, 
-        display: 'block', 
-        minHeight: '400px',
-        overflow: 'hidden',
-        padding: '20px 0',
-        width: '100%',
-        margin: '0 auto',
-        maxWidth: '1400px'
-      }}
-    >
-      {destinations.map(dest => (
-        <SwiperSlide key={dest.id}>
-          <div className="destination-card glass gsap-fade-in">
-            <div className="destination-img" style={{backgroundImage: `url(${dest.image})`}} />
-            <div className="destination-info">
-              <h3>{dest.title}</h3>
-              <p>{dest.location}</p>
-              <span className="rating">⭐ {dest.rating}</span>
-            </div>
-          </div>
-        </SwiperSlide>
-      ))}
-    </Swiper>
-  );
-}
 
 function PopularSearchesSlider() {
   const [popularItineraries, setPopularItineraries] = useState([]);
@@ -633,17 +579,19 @@ const HomePage = () => {
 
 
 
-      {/* Popular Destinations */}
-      <section className="popular-destinations full-width-section" id="destinations" ref={destinationsRef}>
-        <h2 className="section-title gsap-fade-in">Popular Destinations</h2>
-        <PopularDestinationsSlider />
+      {/* Featured Packages */}
+      <section className="categories-section full-width-section" id="packages" ref={categoriesRef} style={{ visibility: 'visible', opacity: 1, display: 'block' }}>
+        <h2 className="section-title gsap-fade-in">Featured Packages</h2>
+        <FeaturedPackages />
       </section>
 
       {/* Popular Searches */}
-      <section className="categories-section full-width-section" id="categories" ref={categoriesRef} style={{ visibility: 'visible', opacity: 1, display: 'block' }}>
+      <section className="popular-searches full-width-section" id="searches" ref={destinationsRef}>
         <h2 className="section-title gsap-fade-in">Popular Searches</h2>
         <PopularSearchesSlider />
       </section>
+
+
 
       {/* Journey Steps */}
       <section className="journey-steps" ref={stepsRef}>

@@ -7,6 +7,8 @@ import ItineraryDetailPage from './components/ItineraryDetailPage';
 import BlogList from './components/BlogList';
 import BlogDetail from './components/BlogDetail';
 import AdminBlogManager from './components/AdminBlogManager';
+import PackageList from './components/PackageList';
+import PackageDetail from './components/PackageDetail';
 import Layout from './components/Layout';
 import HomePage from './components/HomePage';
 import ContactPage from './components/ContactPage';
@@ -32,6 +34,8 @@ function AppContent() {
           <Route index element={<HomePage />} />
           <Route path="search-results" element={<SearchResults />} />
           <Route path="itinerary/:slug" element={<ItineraryDetailPage />} />
+          <Route path="packages" element={<PackageList />} />
+          <Route path="package/:slug" element={<PackageDetail />} />
           <Route path="blog" element={<BlogList />} />
           <Route path="blog/:slug" element={<BlogDetail />} />
           <Route path="contact" element={<ContactPage />} />

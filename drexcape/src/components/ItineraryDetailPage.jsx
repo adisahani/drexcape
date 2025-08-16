@@ -50,6 +50,7 @@ import UserLogin from './UserLogin';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 import ItineraryCard from './ItineraryCard';
 import { parseItineraryDetails } from '../utils/itineraryParser';
+import BookingForm from './BookingForm';
 
 const ItineraryDetailPage = () => {
   const { slug } = useParams();
@@ -71,6 +72,9 @@ const ItineraryDetailPage = () => {
   const [hasAttemptedGeneration, setHasAttemptedGeneration] = useState(false);
   const [hasFetchedGallery, setHasFetchedGallery] = useState(false);
   const [travellers, setTravellers] = useState(1);
+  
+  // Booking state
+  const [openBookingDialog, setOpenBookingDialog] = useState(false);
 
   // Check if user is logged in
   useEffect(() => {
@@ -1277,6 +1281,8 @@ const ItineraryDetailPage = () => {
     setImageDialogOpen(true);
   };
 
+
+
   const handleNextImage = () => {
     setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
   };
@@ -1663,6 +1669,15 @@ const ItineraryDetailPage = () => {
 
   return (
     <>
+      <style>
+        {`
+          @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+          }
+        `}
+      </style>
       <Container maxWidth="lg" sx={{ py: 4 }}>
         {/* Header with Back Button */}
         <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1795,6 +1810,29 @@ const ItineraryDetailPage = () => {
                     </Box>
                   </Grid>
                 </Grid>
+                
+                {/* Book Now Button */}
+                <Box sx={{ mt: 3, textAlign: 'center' }}>
+                  <Button
+                    variant="contained"
+                    size="large"
+                    onClick={() => setOpenBookingDialog(true)}
+                    sx={{
+                      background: 'linear-gradient(135deg, #6d3bbd 0%, #a084e8 100%)',
+                      px: 4,
+                      py: 1.5,
+                      fontSize: '1.1rem',
+                      fontWeight: 600,
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #a084e8 0%, #6d3bbd 100%)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 8px 25px rgba(109, 59, 189, 0.3)'
+                      }
+                    }}
+                  >
+                    🎯 Book Now
+                  </Button>
+                </Box>
               </Box>
             )}
           </Box>
@@ -2390,6 +2428,14 @@ const ItineraryDetailPage = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+      {/* Booking Form Component */}
+      <BookingForm
+        open={openBookingDialog}
+        onClose={() => setOpenBookingDialog(false)}
+        itemData={itinerary}
+        itemType="itinerary"
+      />
 
       {/* Contact Form */}
       {showContactForm && (
