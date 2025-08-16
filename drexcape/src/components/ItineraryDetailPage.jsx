@@ -70,6 +70,7 @@ const ItineraryDetailPage = () => {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [hasAttemptedGeneration, setHasAttemptedGeneration] = useState(false);
   const [hasFetchedGallery, setHasFetchedGallery] = useState(false);
+  const [travellers, setTravellers] = useState(1);
 
   // Check if user is logged in
   useEffect(() => {
@@ -136,6 +137,9 @@ const ItineraryDetailPage = () => {
           dates, duration, transportClass, bookingLink
         } = details;
         
+        // Use the correct price from the main itinerary object instead of priceEstimate
+        const correctPrice = itinerary?.pricePP || itinerary?.price || priceEstimate;
+        
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             {/* Trip Title */}
@@ -156,9 +160,9 @@ const ItineraryDetailPage = () => {
                 }}>
                   {title}
                 </Typography>
-                {priceEstimate && (
+                {correctPrice && (
                   <Typography variant="h6" sx={{ color: '#6d3bbd', fontWeight: 600 }}>
-                    {priceEstimate}
+                    ₹{correctPrice?.toLocaleString()} per person
                   </Typography>
                 )}
                 {dates && (
@@ -708,15 +712,24 @@ const ItineraryDetailPage = () => {
                       }}>
                         📋 Terms & Conditions
                       </Typography>
-                      {priceEstimate && (
-                        <Typography variant="subtitle1" sx={{ 
-                          fontWeight: 600, 
-                          color: '#6d3bbd', 
-                          mb: 2,
-                          fontSize: '1.1rem'
-                        }}>
-                          💰 Expected Price: {priceEstimate}
-                        </Typography>
+                      {correctPrice && (
+                        <Box sx={{ mb: 2 }}>
+                          <Typography variant="subtitle1" sx={{ 
+                            fontWeight: 600, 
+                            color: '#6d3bbd', 
+                            mb: 1,
+                            fontSize: '1.1rem'
+                          }}>
+                            💰 Expected Price: ₹{correctPrice?.toLocaleString()} per person
+                          </Typography>
+                          <Typography variant="body2" sx={{ 
+                            color: '#005bea', 
+                            fontWeight: 600,
+                            fontSize: '1rem'
+                          }}>
+                            💳 Total Budget for {travellers} {travellers === 1 ? 'Traveler' : 'Travelers'}: ₹{(correctPrice * travellers)?.toLocaleString()}
+                          </Typography>
+                        </Box>
                       )}
                       <Typography variant="body1" sx={{ color: '#666', lineHeight: 1.6 }}>
                         {terms}
@@ -1049,6 +1062,11 @@ const ItineraryDetailPage = () => {
         setItinerary(searchState.itineraryData);
         setDetails(searchState.itineraryData.details);
         
+        // Extract travelers count from state
+        if (searchState.travellers) {
+          setTravellers(searchState.travellers);
+        }
+        
         // No need to fetch details separately - they're in the main itinerary data
         return;
       }
@@ -1312,6 +1330,7 @@ const ItineraryDetailPage = () => {
           <p><strong>From:</strong> ${itinerary?.fromLocation} | <strong>To:</strong> ${itinerary?.toLocation}</p>
           <p><strong>Duration:</strong> ${itinerary?.days} Days | <strong>Travelers:</strong> ${itinerary?.travelers} | <strong>Class:</strong> ${itinerary?.travelClass}</p>
           <p><strong>Price:</strong> ₹${itinerary?.price?.toLocaleString() || 'N/A'}</p>
+          <p><strong>Total Budget for ${travellers} ${travellers === 1 ? 'Traveler' : 'Travelers'}:</strong> ₹${((itinerary?.price || itinerary?.pricePP) * travellers)?.toLocaleString() || 'N/A'}</p>
         </div>
     `;
 
@@ -1484,10 +1503,10 @@ const ItineraryDetailPage = () => {
         <div class="section">
           <div class="section-title">📋 Terms & Conditions</div>
           <div class="terms-section">
-            ${details.priceEstimate ? `
+            ${(itinerary?.pricePP || itinerary?.price || details.priceEstimate) ? `
               <div class="detail-item">
                 <div class="detail-label">💰 Expected Price</div>
-                <div style="font-weight: 600; color: #6d3bbd; font-size: 1.1rem;">${details.priceEstimate}</div>
+                <div style="font-weight: 600; color: #6d3bbd; font-size: 1.1rem;">₹${(itinerary?.pricePP || itinerary?.price || details.priceEstimate)?.toLocaleString()} per person</div>
               </div>
             ` : ''}
             ${terms.priceInclusions && terms.priceInclusions.length > 0 ? `
@@ -1731,7 +1750,7 @@ const ItineraryDetailPage = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <People sx={{ color: '#a084e8' }} />
                   <Typography variant="body1">
-                    <strong>{itinerary.travellers} Travelers</strong>
+                    <strong>{travellers} Travelers</strong>
                   </Typography>
                 </Box>
               </Grid>
@@ -1742,9 +1761,42 @@ const ItineraryDetailPage = () => {
                   <Typography variant="body1">
                     <strong>{itinerary.travelClass}</strong>
                   </Typography>
+                </Box>
+              </Grid>
+            </Grid>
+            
+            {/* Price Information */}
+            {(itinerary.price || itinerary.pricePP) && (
+              <Box sx={{ 
+                mt: 3, 
+                p: 3, 
+                background: 'rgba(255, 193, 7, 0.1)', 
+                border: '1px solid rgba(255, 193, 7, 0.3)', 
+                borderRadius: '12px' 
+              }}>
+                <Typography variant="h6" sx={{ color: '#856404', mb: 2, fontWeight: 600 }}>
+                  💰 Pricing for {travellers} {travellers === 1 ? 'Traveler' : 'Travelers'}
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AttachMoney sx={{ color: '#6d3bbd' }} />
+                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        <strong>Per Person:</strong> ₹{(itinerary.pricePP || itinerary.price)?.toLocaleString()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <AttachMoney sx={{ color: '#005bea' }} />
+                      <Typography variant="body1" sx={{ fontWeight: 700, color: '#005bea' }}>
+                        <strong>Total Budget:</strong> ₹{((itinerary.pricePP || itinerary.price) * travellers)?.toLocaleString()}
+                      </Typography>
+                    </Box>
+                  </Grid>
+                </Grid>
               </Box>
-            </Grid>
-            </Grid>
+            )}
           </Box>
 
           {/* Destination Gallery */}

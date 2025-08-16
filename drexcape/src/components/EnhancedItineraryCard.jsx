@@ -8,7 +8,7 @@ const EnhancedItineraryCard = ({
   onViewDetails, 
   isUserLoggedIn, 
   isNavigating,
-  showGallery = false 
+  travellers = 1 // Add travellers prop with default value
 }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [imageError, setImageError] = useState(false);
@@ -122,7 +122,23 @@ const EnhancedItineraryCard = ({
           {/* Professional package structure */}
           {itinerary.pricePP ? (
             <>
-              <p><strong>Expected Price:</strong> ₹{itinerary.pricePP?.toLocaleString()}/person</p>
+              <div style={{ 
+                background: 'rgba(255, 193, 7, 0.1)', 
+                border: '1px solid rgba(255, 193, 7, 0.3)', 
+                borderRadius: '8px', 
+                padding: '12px', 
+                marginBottom: '12px' 
+              }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#856404' }}>
+                  <strong>💰 Pricing for {travellers} {travellers === 1 ? 'Traveler' : 'Travelers'}</strong>
+                </p>
+                <p style={{ margin: '0 0 4px 0', fontSize: '1rem', fontWeight: '600', color: '#333' }}>
+                  <strong>Per Person:</strong> ₹{itinerary.pricePP?.toLocaleString()}
+                </p>
+                <p style={{ margin: '0', fontSize: '1.1rem', fontWeight: '700', color: '#005bea' }}>
+                  <strong>Total Budget:</strong> ₹{(itinerary.pricePP * travellers)?.toLocaleString()}
+                </p>
+              </div>
               {itinerary.hotelExample?.name && (
                 <p><strong>Hotel:</strong> {itinerary.hotelExample.name} ({itinerary.hotelExample.type})</p>
               )}
@@ -151,7 +167,23 @@ const EnhancedItineraryCard = ({
             /* Fallback to old structure */
             <>
               <p><strong>Destinations:</strong> {itinerary.destinations?.join(', ')}</p>
-              <p><strong>Expected Price:</strong> ₹{itinerary.price?.toLocaleString()}</p>
+              <div style={{ 
+                background: 'rgba(255, 193, 7, 0.1)', 
+                border: '1px solid rgba(255, 193, 7, 0.3)', 
+                borderRadius: '8px', 
+                padding: '12px', 
+                marginBottom: '12px' 
+              }}>
+                <p style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: '#856404' }}>
+                  <strong>💰 Pricing for {travellers} {travellers === 1 ? 'Traveler' : 'Travelers'}</strong>
+                </p>
+                <p style={{ margin: '0 0 4px 0', fontSize: '1rem', fontWeight: '600', color: '#333' }}>
+                  <strong>Per Person:</strong> ₹{itinerary.price?.toLocaleString()}
+                </p>
+                <p style={{ margin: '0', fontSize: '1.1rem', fontWeight: '700', color: '#005bea' }}>
+                  <strong>Total Budget:</strong> ₹{(itinerary.price * travellers)?.toLocaleString()}
+                </p>
+              </div>
               <div>
                 <strong>Highlights:</strong>
                 <ul>

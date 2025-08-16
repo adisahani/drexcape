@@ -653,6 +653,7 @@ const SearchResults = () => {
             onViewDetails={handleViewDetails}
             isUserLoggedIn={isUserLoggedIn}
             isNavigating={isNavigating}
+            travellers={travellers}
           />
         ))}
       </div>
