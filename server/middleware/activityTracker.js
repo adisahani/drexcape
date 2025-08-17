@@ -48,6 +48,8 @@ const getIpAddress = (req) => {
 const getUserFromToken = async (req) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
+    console.log('🔍 Checking token:', token ? `${token.substring(0, 20)}...` : 'none');
+    
     if (!token) return null;
     
     // If token is 'logged-in', try to get user from session or cookies
@@ -78,10 +80,13 @@ const getUserFromToken = async (req) => {
     try {
       const jwt = require('jsonwebtoken');
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'drexcape-super-secret-jwt-key-2024');
+      console.log('🔍 JWT decoded:', { userId: decoded.userId, phone: decoded.phone });
       const user = await User.findById(decoded.userId);
       if (user) {
         console.log('✅ Found user from JWT token:', user.phone);
         return user;
+      } else {
+        console.log('❌ User not found for JWT userId:', decoded.userId);
       }
     } catch (jwtError) {
       console.log('JWT verification failed:', jwtError.message);
@@ -246,6 +251,11 @@ const trackSearch = async (req, searchData, processingTime, resultsCount) => {
 // Track form submission
 const trackFormSubmission = async (req, formType, formData, submissionSource = 'unknown') => {
   try {
+    console.log('📝 === trackFormSubmission called ===');
+    console.log('📦 formType:', formType);
+    console.log('📦 formData:', formData);
+    console.log('📦 submissionSource:', submissionSource);
+    
     if (!UserActivity || !UserActivity.create) {
       console.log('Activity tracking disabled - UserActivity model not available');
       return;
@@ -266,15 +276,18 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
       userId = userFromToken._id.toString();
       userPhone = userFromToken.phone;
       user = userFromToken;
+      console.log('✅ User identified from JWT token:', userPhone);
     }
     // Method 2: Check session for user ID (legacy support)
     else if (req.session?.userId) {
       userId = req.session.userId;
       userPhone = req.session.userPhone;
+      console.log('✅ User identified from session:', userPhone);
     }
     // Method 3: Check for user object (if authenticated admin)
     else if (req.user?.userId) {
       userId = req.user.userId;
+      console.log('✅ User identified from req.user:', userId);
     }
     // Method 4: For form submissions, we might have phone in formData
     else if (formData && formData.phone) {
@@ -294,11 +307,15 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
             if (err) console.error('Error saving session:', err);
             else console.log('Session saved successfully for user:', userPhone);
           });
+          
+          console.log('✅ User identified from form data phone:', userPhone);
         }
       } catch (error) {
         console.log('Could not find user by phone:', error.message);
       }
     }
+    
+    console.log('🎯 Final user identification for form submission - userId:', userId, 'userPhone:', userPhone);
     
     await UserActivity.create({
       userId,
@@ -315,6 +332,8 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
       deviceInfo: getDeviceInfo(req.headers['user-agent']),
       timestamp: new Date()
     });
+    
+    console.log('✅ Form submission activity tracked successfully');
   } catch (error) {
     console.error('Error tracking form submission:', error);
   }

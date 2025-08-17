@@ -4,7 +4,7 @@ const bookingSchema = new mongoose.Schema({
   packageId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Package',
-    required: true
+    required: false // Allow null for itinerary bookings
   },
   packageSlug: {
     type: String,
@@ -16,7 +16,8 @@ const bookingSchema = new mongoose.Schema({
   },
   packagePrice: {
     type: Number,
-    required: true
+    required: false,
+    default: 0
   },
   customerInfo: {
     fullName: {

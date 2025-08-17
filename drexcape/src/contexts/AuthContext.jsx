@@ -49,10 +49,10 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const handleUserLogin = (userData) => {
+  const handleUserLogin = (userData, token) => {
     setIsUserLoggedIn(true);
     setUserData(userData);
-    localStorage.setItem('userToken', 'logged-in');
+    localStorage.setItem('userToken', token || 'logged-in');
     localStorage.setItem('userData', JSON.stringify(userData));
   };
 

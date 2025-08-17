@@ -17,7 +17,7 @@ import {
 import {
   CheckCircle
 } from '@mui/icons-material';
-import { buildApiUrl, API_ENDPOINTS } from '../config/api';
+import { buildApiUrl, API_ENDPOINTS, getAuthHeaders } from '../config/api';
 
 const BookingForm = ({ 
   open, 
@@ -42,25 +42,32 @@ const BookingForm = ({
     setBookingLoading(true);
     setBookingError('');
     
+    const requestData = {
+      packageId: itemData._id,
+      packageSlug: itemData.slug,
+      packageTitle: itemData.title,
+      packagePrice: itemData.pricePP || itemData.price,
+      itemType: itemType, // Add item type for backend tracking
+      ...bookingData
+    };
+    
+    console.log('📦 Sending booking request:', requestData);
+    console.log('🔗 API URL:', buildApiUrl(API_ENDPOINTS.PACKAGE_BOOK));
+    console.log('🔑 Headers:', getAuthHeaders());
+    
     try {
       const response = await fetch(buildApiUrl(API_ENDPOINTS.PACKAGE_BOOK), {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          packageId: itemData._id,
-          packageSlug: itemData.slug,
-          packageTitle: itemData.title,
-          packagePrice: itemData.pricePP || itemData.price,
-          itemType: itemType, // Add item type for backend tracking
-          ...bookingData
-        })
+        headers: getAuthHeaders(),
+        body: JSON.stringify(requestData)
       });
 
+      console.log('📡 Response status:', response.status);
       const data = await response.json();
+      console.log('📡 Response data:', data);
 
       if (response.ok) {
+        console.log('✅ Booking successful');
         setBookingSuccess(true);
         setTimeout(() => {
           onClose();
@@ -75,10 +82,16 @@ const BookingForm = ({
           });
         }, 2000);
       } else {
+        console.log('❌ Booking failed:', data.error);
         setBookingError(data.error || 'Failed to submit booking request');
       }
     } catch (error) {
-      console.error('Error submitting booking:', error);
+      console.error('❌ Error submitting booking:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       setBookingError('Failed to submit booking request. Please try again.');
     } finally {
       setBookingLoading(false);

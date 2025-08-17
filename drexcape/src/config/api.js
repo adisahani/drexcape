@@ -23,6 +23,24 @@ export const buildApiUrl = (endpoint) => {
   return fullUrl;
 };
 
+// Helper function to get authorization headers
+export const getAuthHeaders = () => {
+  const userToken = localStorage.getItem('userToken');
+  const adminToken = localStorage.getItem('adminToken');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (userToken && userToken !== 'logged-in') {
+    headers['Authorization'] = `Bearer ${userToken}`;
+  } else if (adminToken) {
+    headers['Authorization'] = `Bearer ${adminToken}`;
+  }
+  
+  return headers;
+};
+
 // Common API endpoints
 export const API_ENDPOINTS = {
   // Itinerary endpoints

@@ -6,6 +6,10 @@ const Booking = require('../models/Booking');
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { auth } = require('../middleware/auth');
+const { activityTracker } = require('../middleware/activityTracker');
+
+// Apply activity tracker middleware
+router.use(activityTracker);
 
 // Configure Cloudinary
 cloudinary.config({
@@ -158,6 +162,8 @@ router.get('/featured/list', async (req, res) => {
 // Book package (public)
 router.post('/book', async (req, res) => {
   try {
+    console.log('📦 Booking request received:', req.body);
+    
     const {
       packageId,
       packageSlug,
@@ -168,7 +174,8 @@ router.post('/book', async (req, res) => {
       preferredDate,
       specialRequests,
       packageTitle,
-      packagePrice
+      packagePrice,
+      itemType
     } = req.body;
 
     // Validate required fields
@@ -176,33 +183,67 @@ router.post('/book', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    // Create booking record
+    // Validate packageId if provided
+    if (packageId && !require('mongoose').Types.ObjectId.isValid(packageId)) {
+      console.log('⚠️ Invalid packageId format:', packageId);
+      return res.status(400).json({ error: 'Invalid package ID format' });
+    }
+
+    // Create booking record with proper validation
     const booking = {
-      packageId,
-      packageSlug,
-      packageTitle,
-      packagePrice,
+      packageId: packageId || null, // Allow null for non-package bookings
+      packageSlug: packageSlug || 'unknown',
+      packageTitle: packageTitle || 'Unknown Package',
+      packagePrice: packagePrice ? parseFloat(packagePrice) : 0,
       customerInfo: {
-        fullName,
-        email,
-        phone,
-        travelers: parseInt(travelers),
+        fullName: fullName.trim(),
+        email: email ? email.trim().toLowerCase() : '',
+        phone: phone.trim(),
+        travelers: parseInt(travelers) || 1,
         preferredDate: new Date(preferredDate),
-        specialRequests: specialRequests || ''
+        specialRequests: specialRequests ? specialRequests.trim() : ''
       },
       status: 'pending',
       createdAt: new Date()
     };
 
-    // Create booking record in database
-    const newBooking = new Booking(booking);
-    await newBooking.save();
+    console.log('📦 Creating booking with data:', booking);
 
-    // Increment package bookings count
-    if (packageId) {
-      await Package.findByIdAndUpdate(packageId, {
-        $inc: { 'bookings': 1 }
-      });
+    // Create booking record in database
+    let newBooking;
+    if (!process.env.MONGODB_URI) {
+      console.log('⚠️ MongoDB not available, simulating booking creation');
+      // Simulate successful booking for demo purposes
+      newBooking = { _id: `mock-${Date.now()}` };
+      console.log('✅ Mock booking created:', newBooking._id);
+    } else {
+      newBooking = new Booking(booking);
+      await newBooking.save();
+      console.log('✅ Booking saved successfully:', newBooking._id);
+    }
+
+    // Increment package bookings count only if packageId is valid and MongoDB is available
+    if (packageId && require('mongoose').Types.ObjectId.isValid(packageId) && process.env.MONGODB_URI) {
+      try {
+        await Package.findByIdAndUpdate(packageId, {
+          $inc: { 'bookings': 1 }
+        });
+        console.log('✅ Package booking count incremented');
+      } catch (packageError) {
+        console.log('⚠️ Could not increment package booking count:', packageError.message);
+      }
+    }
+
+    // Track the booking activity
+    if (req.trackFormSubmission && process.env.MONGODB_URI) {
+      req.trackFormSubmission('booking', {
+        packageId,
+        packageTitle,
+        fullName,
+        phone,
+        travelers,
+        preferredDate
+      }, 'booking_form');
     }
 
     res.status(201).json({ 
@@ -211,7 +252,23 @@ router.post('/book', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error creating booking:', error);
+    console.error('❌ Error creating booking:', error);
+    
+    // Provide more specific error messages
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        error: 'Validation failed', 
+        details: validationErrors 
+      });
+    }
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({ 
+        error: 'Invalid data format provided' 
+      });
+    }
+    
     res.status(500).json({ error: 'Failed to submit booking request' });
   }
 });

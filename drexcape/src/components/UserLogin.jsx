@@ -199,7 +199,7 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
 
       console.log('✅ Login successful, updating auth context...');
       // Update authentication context
-      handleUserLogin(data.user);
+      handleUserLogin(data.user, data.token);
       
       setSuccess('Login successful!');
       setTimeout(() => {
@@ -281,7 +281,7 @@ const UserLogin = ({ onLoginSuccess, onClose, forceOpen = false, isUserLoggedIn 
 
       console.log('✅ Registration successful, updating auth context...');
       // Update authentication context
-      handleUserLogin(data.user);
+      handleUserLogin(data.user, data.token);
       
       setSuccess('Registration successful!');
       setTimeout(() => {
