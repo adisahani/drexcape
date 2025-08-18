@@ -325,7 +325,7 @@ const PackageList = () => {
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                           <Rating 
-                            value={pkg.rating.average} 
+                            value={5} 
                             readOnly 
                             size="small"
                             sx={{ mr: 1 }}

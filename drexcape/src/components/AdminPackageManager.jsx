@@ -598,7 +598,7 @@ const AdminPackageManager = () => {
                     👁️ {pkg.views} views
                   </Typography>
                   <Typography variant="body2" sx={{ color: '#666' }}>
-                    ⭐ {pkg.rating.average.toFixed(1)} ({pkg.rating.count})
+                    ⭐ 5.0 ({pkg.rating.count})
                   </Typography>
                 </Box>
               </CardContent>

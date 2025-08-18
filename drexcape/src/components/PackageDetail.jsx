@@ -315,7 +315,7 @@ const PackageDetail = () => {
               }}
             />
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Rating value={packageData.rating.average} readOnly size="small" />
+                              <Rating value={5} readOnly size="small" />
               <Typography variant="body2" sx={{ color: '#2a0140', fontWeight: 500 }}>
                 ({packageData.rating.count} reviews)
               </Typography>

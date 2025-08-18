@@ -258,14 +258,14 @@ function PopularSearchesSlider() {
 
   // Fallback data when no itineraries in database
   const fallbackSearches = [
-    { id: 1, title: "Mumbai to Goa", location: "Mumbai → Goa", rating: "4.8", image: cardImage1 },
-    { id: 2, title: "Delhi to Manali", location: "Delhi → Manali", rating: "4.9", image: cardImage2 },
-    { id: 3, title: "Bangalore to Jaipur", location: "Bangalore → Jaipur", rating: "4.7", image: cardImage1 },
-    { id: 4, title: "Chennai to Kerala", location: "Chennai → Kerala", rating: "4.6", image: cardImage2 },
-    { id: 5, title: "Hyderabad to Udaipur", location: "Hyderabad → Udaipur", rating: "4.5", image: cardImage1 },
-    { id: 6, title: "Pune to Shimla", location: "Pune → Shimla", rating: "4.9", image: cardImage2 },
-    { id: 7, title: "Kolkata to Darjeeling", location: "Kolkata → Darjeeling", rating: "4.7", image: cardImage1 },
-    { id: 8, title: "Ahmedabad to Rishikesh", location: "Ahmedabad → Rishikesh", rating: "4.8", image: cardImage2 }
+    { id: 1, title: "Mumbai to Goa", location: "Mumbai → Goa", rating: "5.0", image: cardImage1 },
+    { id: 2, title: "Delhi to Manali", location: "Delhi → Manali", rating: "5.0", image: cardImage2 },
+    { id: 3, title: "Bangalore to Jaipur", location: "Bangalore → Jaipur", rating: "5.0", image: cardImage1 },
+    { id: 4, title: "Chennai to Kerala", location: "Chennai → Kerala", rating: "5.0", image: cardImage2 },
+    { id: 5, title: "Hyderabad to Udaipur", location: "Hyderabad → Udaipur", rating: "5.0", image: cardImage1 },
+    { id: 6, title: "Pune to Shimla", location: "Pune → Shimla", rating: "5.0", image: cardImage2 },
+    { id: 7, title: "Kolkata to Darjeeling", location: "Kolkata → Darjeeling", rating: "5.0", image: cardImage1 },
+    { id: 8, title: "Ahmedabad to Rishikesh", location: "Ahmedabad → Rishikesh", rating: "5.0", image: cardImage2 }
   ];
 
   // Use real data if available, otherwise use fallback
