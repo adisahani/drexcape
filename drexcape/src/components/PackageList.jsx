@@ -137,7 +137,7 @@ const PackageList = () => {
       {/* Header */}
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h3" sx={{ color: 'white', fontWeight: 700, mb: 2 }}>
-          📦 Travel Packages
+        ✈️ Travel Packages
         </Typography>
         <Typography variant="h6" sx={{ color: 'white', mb: 3, fontWeight: 500 }}>
           Discover amazing travel experiences curated just for you

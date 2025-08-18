@@ -169,10 +169,15 @@ const ContactPage = () => {
                 background: 'linear-gradient(135deg, #6d3bbd, #a084e8)',
                 color: 'white',
                 fontWeight: 700,
-                fontSize: '1.1rem',
-                py: 1.5,
-                px: 3,
-                boxShadow: '0 4px 12px rgba(109, 59, 189, 0.3)'
+                fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+                py: { xs: 1, sm: 1.5 },
+                px: { xs: 2, sm: 3 },
+                boxShadow: '0 4px 12px rgba(109, 59, 189, 0.3)',
+                maxWidth: '100%',
+                whiteSpace: 'normal',
+                textAlign: 'center',
+                height: 'auto',
+                minHeight: { xs: '32px', sm: '40px' }
               }}
             />
           </Paper>
@@ -227,10 +232,15 @@ const ContactPage = () => {
                background: 'linear-gradient(135deg, #a084e8, #6d3bbd)',
                color: 'white',
                fontWeight: 700,
-               fontSize: '1.1rem',
-               py: 1.5,
-               px: 3,
-               boxShadow: '0 4px 12px rgba(160, 132, 232, 0.3)'
+               fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+               py: { xs: 1, sm: 1.5 },
+               px: { xs: 2, sm: 3 },
+               boxShadow: '0 4px 12px rgba(160, 132, 232, 0.3)',
+               maxWidth: '100%',
+               whiteSpace: 'normal',
+               textAlign: 'center',
+               height: 'auto',
+               minHeight: { xs: '32px', sm: '40px' }
              }}
            />
          </Paper>
@@ -239,7 +249,7 @@ const ContactPage = () => {
              {/* Contact Information Grid */}
        <Grid container spacing={4} sx={{ mb: 8 }}>
         {/* Office Location */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} md={4}>
                      <Card 
              className="gsap-fade-in"
              sx={{
@@ -301,7 +311,7 @@ const ContactPage = () => {
         </Grid>
 
                  {/* Phone Number */}
-         <Grid item xs={12} md={6}>
+         <Grid item xs={12} md={4}>
            <Card 
              className="gsap-fade-in"
              sx={{
@@ -364,6 +374,76 @@ const ContactPage = () => {
                  }}
                >
                  Call us anytime to discuss your travel plans, get quotes, or ask any questions about our services.
+               </Typography>
+             </CardContent>
+           </Card>
+         </Grid>
+
+                 {/* Email Address */}
+         <Grid item xs={12} md={4}>
+           <Card 
+             className="gsap-fade-in"
+             sx={{
+               height: '100%',
+               background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.9) 100%)',
+               border: '3px solid rgba(160, 132, 232, 0.4)',
+               borderRadius: '20px',
+               backdropFilter: 'blur(15px)',
+               transition: 'all 0.3s ease',
+               boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
+               '&:hover': {
+                 transform: 'translateY(-8px)',
+                 boxShadow: '0 25px 60px rgba(160, 132, 232, 0.3)',
+                 borderColor: 'rgba(160, 132, 232, 0.6)'
+               }
+             }}
+           >
+             <CardContent sx={{ p: 5 }}>
+               <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+                 <EmailIcon sx={{ fontSize: 50, color: '#6d3bbd', mr: 3 }} />
+                 <Typography 
+                   variant="h4" 
+                   sx={{
+                     fontFamily: 'Rajdhani, sans-serif',
+                     fontWeight: 700,
+                     color: '#1a0033',
+                     fontSize: { xs: '1.5rem', md: '1.8rem' }
+                   }}
+                 >
+                   Email Address
+                 </Typography>
+               </Box>
+               <Typography 
+                 variant="h3" 
+                 sx={{
+                   color: '#4a148c',
+                   fontFamily: 'Rajdhani, sans-serif',
+                   fontWeight: 700,
+                   mb: 3,
+                   textDecoration: 'none',
+                   fontSize: { xs: '1.2rem', md: '1.5rem' },
+                   wordBreak: 'break-all',
+                   '&:hover': {
+                     color: '#6d3bbd',
+                     textShadow: '0 0 10px rgba(109, 59, 189, 0.3)'
+                   }
+                 }}
+                 component="a"
+                 href="mailto:riken@drexcape.com"
+               >
+                 riken@drexcape.com
+               </Typography>
+               <Typography 
+                 variant="body1" 
+                 sx={{
+                   color: '#374151',
+                   fontFamily: 'Rajdhani, sans-serif',
+                   lineHeight: 1.7,
+                   fontSize: '1.1rem',
+                   fontWeight: 500
+                 }}
+               >
+                 Send us an email for inquiries, support, or to schedule a consultation about your travel plans.
                </Typography>
              </CardContent>
            </Card>
@@ -691,10 +771,16 @@ const ContactPage = () => {
                background: 'linear-gradient(135deg, #ff9800, #ffc107)',
                color: '#1a0033',
                fontWeight: 800,
-               fontSize: '1.2rem',
-               py: 2,
-               px: 4,
-               boxShadow: '0 8px 20px rgba(255, 152, 0, 0.3)'
+               fontSize: { xs: '0.8rem', sm: '1rem', md: '1.2rem' },
+               py: { xs: 1.5, sm: 2 },
+               px: { xs: 2, sm: 3, md: 4 },
+               boxShadow: '0 8px 20px rgba(255, 152, 0, 0.3)',
+               maxWidth: '100%',
+               whiteSpace: 'normal',
+               textAlign: 'center',
+               height: 'auto',
+               minHeight: { xs: '40px', sm: '48px' },
+               wordBreak: 'break-word'
              }}
            />
          </Paper>
