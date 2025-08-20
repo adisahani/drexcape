@@ -32,7 +32,9 @@ app.use(cors({
     'http://localhost:5173',
     'https://drexcape.onrender.com',
     'https://drexcape-frontend.onrender.com',
-    'https://drexcape-web.onrender.com'
+    'https://drexcape-web.onrender.com',
+    'https://drexcape.com',
+    'https://www.drexcape.com'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -97,7 +99,9 @@ app.get('/api/health', (req, res) => {
         'http://localhost:5173',
         'https://drexcape.onrender.com',
         'https://drexcape-frontend.onrender.com',
-        'https://drexcape-web.onrender.com'
+        'https://drexcape-web.onrender.com',
+        'https://drexcape.com',
+        'https://www.drexcape.com'
       ]
     }
   });

@@ -66,6 +66,7 @@ const Header = ({ isUserLoggedIn, userData, onUserLogout }) => {
     { text: 'Packages', href: '/packages', icon: <PackageIcon /> },
     { text: 'Blog', href: '/blog', icon: <BlogIcon /> },
     { text: 'Contact', href: '/contact', icon: <ContactIcon /> },
+    { text: 'Debug', href: '/debug', icon: <ContactIcon /> },
   ];
 
   const handleNavClick = (href) => {

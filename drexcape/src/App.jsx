@@ -12,6 +12,7 @@ import PackageDetail from './components/PackageDetail';
 import Layout from './components/Layout';
 import HomePage from './components/HomePage';
 import ContactPage from './components/ContactPage';
+import ConnectionDebug from './components/ConnectionDebug';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 function AppContent() {
@@ -39,6 +40,7 @@ function AppContent() {
           <Route path="blog" element={<BlogList />} />
           <Route path="blog/:slug" element={<BlogDetail />} />
           <Route path="contact" element={<ContactPage />} />
+          <Route path="debug" element={<ConnectionDebug />} />
           <Route path="admin-blogs" element={
             isAdminLoggedIn ? (
               <AdminBlogManager />

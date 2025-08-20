@@ -7,20 +7,40 @@ const getApiBaseUrl = () => {
     return '';
   }
   
-  // In production, use the backend service URL
-  // Use the backend service URL from Render
-  const productionUrl = 'https://drexcape.onrender.com';
-  console.log('🚀 Production mode: Using backend URL:', productionUrl);
-  return productionUrl;
+  // Check if we're on the custom domain (drexcape.com)
+  if (window.location.hostname === 'drexcape.com' || window.location.hostname === 'www.drexcape.com') {
+    // On custom domain, use the Render backend URL
+    const productionUrl = 'https://drexcape.onrender.com';
+    console.log('🌐 Custom domain detected: Using Render backend URL:', productionUrl);
+    return productionUrl;
+  }
+  
+  // For other Render subdomains, use relative paths
+  console.log('🚀 Production mode: Using relative API paths (Render deployment)');
+  return '';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
 
-// Helper function to build API URLs
+// Helper function to build API URLs with fallback
 export const buildApiUrl = (endpoint) => {
   const fullUrl = `${API_BASE_URL}${endpoint}`;
   console.log('🔗 Building API URL:', fullUrl);
   return fullUrl;
+};
+
+// Helper function to fetch with fallback (simplified since we always use Render backend)
+export const fetchWithFallback = async (endpoint, options = {}) => {
+  const url = buildApiUrl(endpoint);
+  
+  try {
+    console.log('🔄 Making API request to:', url);
+    const response = await fetch(url, options);
+    return response;
+  } catch (error) {
+    console.error('❌ API request failed:', error);
+    throw error;
+  }
 };
 
 // Helper function to get authorization headers
