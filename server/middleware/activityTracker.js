@@ -226,6 +226,8 @@ const trackSearch = async (req, searchData, processingTime, resultsCount) => {
     }
     
     console.log('🎯 Final user identification for search - userId:', userId, 'userPhone:', userPhone);
+    console.log('🔍 Request URL:', req.url);
+    console.log('🔍 Request method:', req.method);
     
     await UserActivity.create({
       userId,
@@ -339,6 +341,8 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
     }
     
     console.log('🎯 Final user identification for form submission - userId:', userId, 'userPhone:', userPhone);
+    console.log('🔍 Request URL:', req.url);
+    console.log('🔍 Request method:', req.method);
     
     await UserActivity.create({
       userId,
@@ -369,6 +373,8 @@ const trackItineraryView = async (req, itineraryId, itinerarySlug, viewDuration 
     console.log('📦 itineraryId:', itineraryId);
     console.log('📦 itinerarySlug:', itinerarySlug);
     console.log('📦 viewDuration:', viewDuration);
+    console.log('🔍 Request URL:', req.url);
+    console.log('🔍 Request method:', req.method);
     
     if (!UserActivity || !UserActivity.create) {
       console.log('Activity tracking disabled - UserActivity model not available');
@@ -429,6 +435,8 @@ const trackItineraryView = async (req, itineraryId, itinerarySlug, viewDuration 
     if (userFromToken && User && User.addViewedItinerary) {
       await userFromToken.addViewedItinerary(itineraryId, viewDuration);
     }
+    
+    console.log('🎯 Final user identification for itinerary view - userId:', userId, 'userPhone:', userPhone);
   } catch (error) {
     console.error('Error tracking itinerary view:', error);
   }
@@ -655,7 +663,9 @@ const activityTracker = (req, res, next) => {
       userId: req.session?.userId,
       userPhone: req.session?.userPhone,
       cookies: req.headers.cookie ? req.headers.cookie.substring(0, 100) + '...' : 'none',
-      authorization: req.header('Authorization') ? req.header('Authorization').substring(0, 20) + '...' : 'none'
+      authorization: req.header('Authorization') ? req.header('Authorization').substring(0, 20) + '...' : 'none',
+      url: req.url,
+      method: req.method
     });
   }
 

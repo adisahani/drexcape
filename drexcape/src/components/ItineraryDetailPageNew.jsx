@@ -47,7 +47,8 @@ import {
   NavigateBefore
 } from '@mui/icons-material';
 import UserLogin from './UserLogin';
-import { buildApiUrl, API_ENDPOINTS } from '../config/api';
+import { buildApiUrl, API_ENDPOINTS, getAuthHeaders } from '../config/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const ItineraryDetailPage = () => {
   const { slug } = useParams();
@@ -64,19 +65,9 @@ const ItineraryDetailPage = () => {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [showContactForm, setShowContactForm] = useState(false);
-  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false);
-  const [userData, setUserData] = useState(null);
 
-  // Check if user is logged in
-  useEffect(() => {
-    const token = localStorage.getItem('userToken');
-    const storedUserData = localStorage.getItem('userData');
-    
-    if (token && storedUserData) {
-      setIsUserLoggedIn(true);
-      setUserData(JSON.parse(storedUserData));
-    }
-  }, []);
+  // Get authentication state from context
+  const { isUserLoggedIn, userData } = useAuth();
 
   // Process images from itinerary data
   const processImages = (itineraryData) => {
@@ -154,7 +145,10 @@ const ItineraryDetailPage = () => {
       
       // If no search state, try to fetch from database
       console.log('⚠️ No search state, fetching from database');
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.ITINERARY_DETAILS(slug)));
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ITINERARY_DETAILS(slug)), {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
       
       if (response.ok) {
         const data = await response.json();
@@ -181,7 +175,10 @@ const ItineraryDetailPage = () => {
     try {
       console.log('Fetching details for itinerary:', itineraryId);
       setDetailsLoading(true);
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.ITINERARY_DETAILS_BY_ID(itineraryId)));
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ITINERARY_DETAILS_BY_ID(itineraryId)), {
+        method: 'GET',
+        headers: getAuthHeaders()
+      });
       
       if (response.ok) {
         const data = await response.json();
