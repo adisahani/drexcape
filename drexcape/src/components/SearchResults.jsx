@@ -511,7 +511,7 @@ const SearchResults = () => {
     console.log('📋 pendingItinerary:', pendingItinerary);
     
     // Update user login status using context
-    handleUserLogin(userData);
+    handleUserLogin(userData, 'logged-in');
     setUserHasAccess(true);
     
     // Close the login form

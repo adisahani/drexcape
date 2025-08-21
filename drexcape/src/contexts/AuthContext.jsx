@@ -24,8 +24,13 @@ export const AuthProvider = ({ children }) => {
     
     if (userToken && storedUserData) {
       try {
+        const parsedUserData = JSON.parse(storedUserData);
         setIsUserLoggedIn(true);
-        setUserData(JSON.parse(storedUserData));
+        setUserData(parsedUserData);
+        
+        // Ensure user data cookie is set for backend access
+        const userDataCookie = `drexcape_user_data=${encodeURIComponent(storedUserData)}; path=/; max-age=86400; SameSite=Lax`;
+        document.cookie = userDataCookie;
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.removeItem('userToken');
@@ -54,6 +59,10 @@ export const AuthProvider = ({ children }) => {
     setUserData(userData);
     localStorage.setItem('userToken', token || 'logged-in');
     localStorage.setItem('userData', JSON.stringify(userData));
+    
+    // Store user data in cookie for backend access
+    const userDataCookie = `drexcape_user_data=${encodeURIComponent(JSON.stringify(userData))}; path=/; max-age=86400; SameSite=Lax`;
+    document.cookie = userDataCookie;
   };
 
   const handleUserLogout = () => {
@@ -61,6 +70,9 @@ export const AuthProvider = ({ children }) => {
     setUserData(null);
     localStorage.removeItem('userToken');
     localStorage.removeItem('userData');
+    
+    // Remove user data cookie
+    document.cookie = 'drexcape_user_data=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
   };
 
   const handleAdminLogin = (adminData, token) => {

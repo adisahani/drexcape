@@ -16,8 +16,8 @@ import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 const AdminLogin = () => {
   const { handleAdminLogin } = useAuth();
   const [formData, setFormData] = useState({
-    email: 'admin@drexcape.com',
-    password: 'admin123'
+    email: '',
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -133,7 +133,7 @@ const AdminLogin = () => {
           </Box>
 
           <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-            Default credentials: admin@drexcape.com / admin123
+            Contact system administrator for access credentials
           </Typography>
         </Paper>
       </Box>

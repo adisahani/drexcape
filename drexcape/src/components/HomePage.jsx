@@ -621,7 +621,7 @@ const HomePage = () => {
           <div className="offer-img" />
           <div className="offer-info">
             <h3>20% OFF</h3>
-            <p>On all bookings till 28 September, 2023</p>
+            <p>On all bookings till 28 September, 2025</p>
             {!isUserLoggedIn && (
               <button className="cta-primary" onClick={() => setShowPromotionalPopup(true)}>Book Now</button>
             )}

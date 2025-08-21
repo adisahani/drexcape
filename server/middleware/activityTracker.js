@@ -72,6 +72,29 @@ const getUserFromToken = async (req) => {
         return userFromCookie;
       }
       
+      // Check for any user data in localStorage (via cookies)
+      const cookies = req.headers.cookie;
+      if (cookies) {
+        const cookiePairs = cookies.split(';');
+        for (const pair of cookiePairs) {
+          const [name, value] = pair.trim().split('=');
+          if (name === 'drexcape_user_data') {
+            try {
+              const userData = JSON.parse(decodeURIComponent(value));
+              if (userData.phone) {
+                const user = await User.findOne({ phone: userData.phone });
+                if (user) {
+                  console.log('✅ Found user from localStorage cookie:', user.phone);
+                  return user;
+                }
+              }
+            } catch (error) {
+              console.log('Error parsing localStorage cookie:', error.message);
+            }
+          }
+        }
+      }
+      
       console.log('❌ No user found for "logged-in" token');
       return null;
     }
@@ -630,7 +653,9 @@ const activityTracker = (req, res, next) => {
       hasSession: !!req.session,
       sessionKeys: req.session ? Object.keys(req.session) : [],
       userId: req.session?.userId,
-      userPhone: req.session?.userPhone
+      userPhone: req.session?.userPhone,
+      cookies: req.headers.cookie ? req.headers.cookie.substring(0, 100) + '...' : 'none',
+      authorization: req.header('Authorization') ? req.header('Authorization').substring(0, 20) + '...' : 'none'
     });
   }
 
