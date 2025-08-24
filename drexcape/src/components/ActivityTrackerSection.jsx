@@ -41,7 +41,8 @@ import {
   TrendingDown as TrendingDownIcon,
   AccessTime as AccessTimeIcon,
   LocationOn as LocationIcon,
-  DeviceHub as DeviceIcon
+  DeviceHub as DeviceIcon,
+  Login as LoginIcon
 } from '@mui/icons-material';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
@@ -49,6 +50,7 @@ const ActivityTrackerSection = () => {
   const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [stats, setStats] = useState({});
+  const [loginStats, setLoginStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filterDialog, setFilterDialog] = useState(false);
@@ -67,11 +69,34 @@ const ActivityTrackerSection = () => {
     setCurrentPage(1); // Reset to first page when filters change
     fetchActivities();
     fetchStats();
+    fetchLoginStats();
   }, [filters]);
 
   useEffect(() => {
     fetchActivities();
   }, [currentPage]);
+
+  const fetchLoginStats = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const queryParams = new URLSearchParams({
+        days: filters.dateRange.replace('d', '')
+      });
+
+      const response = await fetch(buildApiUrl(`${API_ENDPOINTS.ANALYTICS_LOGIN_STATS}?${queryParams}`), {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch login stats');
+      
+      const data = await response.json();
+      setLoginStats(data);
+    } catch (error) {
+      console.error('Error fetching login stats:', error);
+    }
+  };
 
   const fetchActivities = async () => {
     try {
@@ -277,6 +302,27 @@ const ActivityTrackerSection = () => {
           }}>
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <LoginIcon sx={{ color: '#ffe066', fontSize: 40 }} />
+                <Box>
+                  <Typography variant="h4" sx={{ color: '#ffffff' }}>
+                    {loginStats.totalLogins || 0}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#ffe066' }}>
+                    User Logins
+                  </Typography>
+                </Box>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Card sx={{ 
+            background: 'linear-gradient(135deg, #1a0033 0%, #3a006a 100%)',
+            border: '1px solid rgba(255, 224, 102, 0.3)'
+          }}>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <DeviceIcon sx={{ color: '#ffe066', fontSize: 40 }} />
                 <Box>
                   <Typography variant="h4" sx={{ color: '#ffffff' }}>
@@ -417,9 +463,34 @@ const ActivityTrackerSection = () => {
                        </Box>
                      )}
                      {activity.formData && (
-                       <Typography variant="body2">
-                         {activity.formData.fields?.name} ({activity.formData.fields?.phone})
-                       </Typography>
+                       <Box>
+                         <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#ffe066' }}>
+                           {activity.formData.formType === 'user_login' ? '🔐 User Login' :
+                            activity.formData.formType === 'user_register' ? '📝 User Registration' :
+                            activity.formData.formType === 'promotional' ? '📞 Promotional Lead' :
+                            activity.formData.formType}
+                         </Typography>
+                         {activity.formData.fields?.name && (
+                           <Typography variant="body2" sx={{ mb: 0.5 }}>
+                             👤 {activity.formData.fields.name}
+                           </Typography>
+                         )}
+                         {activity.formData.fields?.phone && (
+                           <Typography variant="caption" sx={{ color: '#a084e8', display: 'block' }}>
+                             📱 {activity.formData.fields.phone}
+                           </Typography>
+                         )}
+                         {activity.formData.fields?.email && (
+                           <Typography variant="caption" sx={{ color: '#ffe066', display: 'block' }}>
+                             📧 {activity.formData.fields.email}
+                           </Typography>
+                         )}
+                         {activity.formData.submissionSource && (
+                           <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.7)', display: 'block' }}>
+                             📍 Source: {activity.formData.submissionSource}
+                           </Typography>
+                         )}
+                       </Box>
                      )}
                      {activity.itineraryData && (
                                                <Tooltip title="Click to view itinerary (opens in new tab)" arrow>
@@ -553,6 +624,64 @@ const ActivityTrackerSection = () => {
          </Box>
        )}
 
+      {/* Login Activities Section */}
+      {loginStats.loginUserDetails && loginStats.loginUserDetails.length > 0 && (
+        <Paper sx={{ 
+          background: 'linear-gradient(135deg, #1a0033 0%, #3a006a 100%)',
+          border: '1px solid rgba(255, 224, 102, 0.3)',
+          mt: 4
+        }}>
+          <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 224, 102, 0.3)' }}>
+            <Typography variant="h6" sx={{ color: '#ffe066', display: 'flex', alignItems: 'center', gap: 1 }}>
+              <LoginIcon />
+              Recent User Logins ({loginStats.period})
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mt: 1 }}>
+              Total Logins: {loginStats.totalLogins} | Unique Users: {loginStats.uniqueLoginUsers}
+            </Typography>
+          </Box>
+          
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>User</TableCell>
+                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Phone</TableCell>
+                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Email</TableCell>
+                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Last Activity</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {loginStats.loginUserDetails.slice(0, 10).map((user) => (
+                  <TableRow key={user.id} sx={{ '&:hover': { backgroundColor: 'rgba(255, 224, 102, 0.1)' } }}>
+                    <TableCell sx={{ color: '#ffffff' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PersonIcon sx={{ color: '#ffe066', fontSize: 20 }} />
+                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                          {user.name}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ color: '#ffffff' }}>
+                      {user.phone}
+                    </TableCell>
+                    <TableCell sx={{ color: '#ffffff' }}>
+                      {user.email || 'N/A'}
+                    </TableCell>
+                    <TableCell sx={{ color: '#ffffff' }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <AccessTimeIcon sx={{ color: '#ffe066', fontSize: 16 }} />
+                        {user.lastActivity ? formatDate(new Date(user.lastActivity)) : 'N/A'}
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
+
       {/* Filter Dialog */}
       <Dialog 
         open={filterDialog} 
@@ -591,6 +720,8 @@ const ActivityTrackerSection = () => {
               <MenuItem value="all">All Activities</MenuItem>
               <MenuItem value="search">Searches</MenuItem>
               <MenuItem value="form_submission">Form Submissions</MenuItem>
+              <MenuItem value="user_login">User Logins</MenuItem>
+              <MenuItem value="user_register">User Registrations</MenuItem>
               <MenuItem value="itinerary_view">Itinerary Views</MenuItem>
               <MenuItem value="itinerary_share">Itinerary Shares</MenuItem>
               <MenuItem value="error">Errors</MenuItem>

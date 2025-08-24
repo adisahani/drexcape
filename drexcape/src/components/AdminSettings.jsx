@@ -49,6 +49,20 @@ const AdminSettings = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [changePasswordDialog, setChangePasswordDialog] = useState(false);
   const [adminData, setAdminData] = useState(null);
+  
+  // Password change states
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [passwordErrors, setPasswordErrors] = useState({});
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   // Form states
   const [apiKeys, setApiKeys] = useState({
@@ -101,6 +115,120 @@ const AdminSettings = () => {
     });
   };
 
+  // Password change functions
+  const handlePasswordChange = (field, value) => {
+    setPasswordData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    // Clear error when user starts typing
+    if (passwordErrors[field]) {
+      setPasswordErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
+  };
+
+  const togglePasswordVisibility = (field) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
+  const validatePasswords = () => {
+    const errors = {};
+    
+    if (!passwordData.currentPassword) {
+      errors.currentPassword = 'Current password is required';
+    }
+    
+    if (!passwordData.newPassword) {
+      errors.newPassword = 'New password is required';
+    } else if (passwordData.newPassword.length < 6) {
+      errors.newPassword = 'Password must be at least 6 characters';
+    }
+    
+    if (!passwordData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your new password';
+    } else if (passwordData.newPassword !== passwordData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setPasswordErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleChangePassword = async () => {
+    if (!validatePasswords()) {
+      return;
+    }
+
+    setPasswordLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.ADMIN_CHANGE_PASSWORD), {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSuccess('Password changed successfully!');
+        setChangePasswordDialog(false);
+        // Reset form
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        setShowPasswords({
+          current: false,
+          new: false,
+          confirm: false
+        });
+        setPasswordErrors({});
+      } else {
+        setError(data.error || 'Failed to change password');
+      }
+    } catch (err) {
+      console.error('Error changing password:', err);
+      setError('Failed to change password. Please try again.');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  const handleClosePasswordDialog = () => {
+    setChangePasswordDialog(false);
+    // Reset form
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setShowPasswords({
+      current: false,
+      new: false,
+      confirm: false
+    });
+    setPasswordErrors({});
+    setError('');
+    setSuccess('');
+  };
+
   const handleSaveSettings = async () => {
     setLoading(true);
     setError('');
@@ -117,29 +245,7 @@ const AdminSettings = () => {
     }
   };
 
-  const handleChangePassword = async (currentPassword, newPassword) => {
-    try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.ADMIN_CHANGE_PASSWORD), {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
 
-      if (response.ok) {
-        setSuccess('Password changed successfully!');
-        setChangePasswordDialog(false);
-      } else {
-        const data = await response.json();
-        setError(data.error || 'Failed to change password');
-      }
-    } catch (err) {
-      setError('Network error while changing password');
-    }
-  };
 
   return (
     <Box sx={{ p: 3 }}>
@@ -470,34 +576,86 @@ const AdminSettings = () => {
       </Box>
 
       {/* Change Password Dialog */}
-      <Dialog open={changePasswordDialog} onClose={() => setChangePasswordDialog(false)}>
+      <Dialog open={changePasswordDialog} onClose={handleClosePasswordDialog} maxWidth="sm" fullWidth>
         <DialogTitle>Change Password</DialogTitle>
         <DialogContent>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+              {error}
+            </Alert>
+          )}
+          
+          {success && (
+            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccess('')}>
+              {success}
+            </Alert>
+          )}
+          
           <TextField
             fullWidth
             label="Current Password"
-            type="password"
+            type={showPasswords.current ? 'text' : 'password'}
+            value={passwordData.currentPassword}
+            onChange={(e) => handlePasswordChange('currentPassword', e.target.value)}
             margin="normal"
+            error={!!passwordErrors.currentPassword}
+            helperText={passwordErrors.currentPassword}
+            InputProps={{
+              endAdornment: (
+                <IconButton onClick={() => togglePasswordVisibility('current')}>
+                  {showPasswords.current ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              ),
+            }}
           />
+          
           <TextField
             fullWidth
             label="New Password"
-            type="password"
+            type={showPasswords.new ? 'text' : 'password'}
+            value={passwordData.newPassword}
+            onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
             margin="normal"
+            error={!!passwordErrors.newPassword}
+            helperText={passwordErrors.newPassword}
+            InputProps={{
+              endAdornment: (
+                <IconButton onClick={() => togglePasswordVisibility('new')}>
+                  {showPasswords.new ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              ),
+            }}
           />
+          
           <TextField
             fullWidth
             label="Confirm New Password"
-            type="password"
+            type={showPasswords.confirm ? 'text' : 'password'}
+            value={passwordData.confirmPassword}
+            onChange={(e) => handlePasswordChange('confirmPassword', e.target.value)}
             margin="normal"
+            error={!!passwordErrors.confirmPassword}
+            helperText={passwordErrors.confirmPassword}
+            InputProps={{
+              endAdornment: (
+                <IconButton onClick={() => togglePasswordVisibility('confirm')}>
+                  {showPasswords.confirm ? <VisibilityOff /> : <Visibility />}
+                </IconButton>
+              ),
+            }}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setChangePasswordDialog(false)}>
+          <Button onClick={handleClosePasswordDialog} disabled={passwordLoading}>
             Cancel
           </Button>
-          <Button variant="contained" onClick={() => {/* Handle password change */}}>
-            Change Password
+          <Button 
+            variant="contained" 
+            onClick={handleChangePassword}
+            disabled={passwordLoading}
+            startIcon={passwordLoading ? <CircularProgress size={20} /> : null}
+          >
+            {passwordLoading ? 'Changing...' : 'Change Password'}
           </Button>
         </DialogActions>
       </Dialog>

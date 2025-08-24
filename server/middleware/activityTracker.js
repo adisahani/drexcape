@@ -280,9 +280,13 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
     console.log('📦 formType:', formType);
     console.log('📦 formData:', formData);
     console.log('📦 submissionSource:', submissionSource);
+    console.log('🔍 Request URL:', req.url);
+    console.log('🔍 Request method:', req.method);
+    console.log('🔍 Session ID:', req.sessionID);
+    console.log('🔍 Session data:', req.session);
     
     if (!UserActivity || !UserActivity.create) {
-      console.log('Activity tracking disabled - UserActivity model not available');
+      console.log('❌ Activity tracking disabled - UserActivity model not available');
       return;
     }
 
@@ -334,17 +338,18 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
           });
           
           console.log('✅ User identified from form data phone:', userPhone);
+        } else {
+          console.log('⚠️ User not found by phone:', formData.phone);
         }
       } catch (error) {
-        console.log('Could not find user by phone:', error.message);
+        console.log('❌ Could not find user by phone:', error.message);
       }
     }
     
     console.log('🎯 Final user identification for form submission - userId:', userId, 'userPhone:', userPhone);
-    console.log('🔍 Request URL:', req.url);
-    console.log('🔍 Request method:', req.method);
     
-    await UserActivity.create({
+    // Create activity record
+    const activityData = {
       userId,
       sessionId,
       userAgent: req.headers['user-agent'],
@@ -358,11 +363,38 @@ const trackFormSubmission = async (req, formType, formData, submissionSource = '
       },
       deviceInfo: getDeviceInfo(req.headers['user-agent']),
       timestamp: new Date()
+    };
+    
+    console.log('📊 Creating activity record:', {
+      userId: activityData.userId,
+      activityType: activityData.activityType,
+      formType: activityData.formData.formType,
+      timestamp: activityData.timestamp
     });
     
-    console.log('✅ Form submission activity tracked successfully');
+    const createdActivity = await UserActivity.create(activityData);
+    console.log('✅ Form submission activity tracked successfully. Activity ID:', createdActivity._id);
+    
+    // For login activities, also update user's last activity
+    if (formType === 'user_login' && user) {
+      try {
+        user.lastActivity = new Date();
+        await user.save();
+        console.log('✅ Updated user last activity for login:', userPhone);
+      } catch (error) {
+        console.error('❌ Error updating user last activity:', error.message);
+      }
+    }
+    
   } catch (error) {
-    console.error('Error tracking form submission:', error);
+    console.error('❌ Error tracking form submission:', error);
+    console.error('❌ Error details:', {
+      message: error.message,
+      stack: error.stack,
+      formType,
+      formData,
+      submissionSource
+    });
   }
 };
 

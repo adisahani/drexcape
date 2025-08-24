@@ -252,6 +252,15 @@ router.get('/activity-feed', auth, async (req, res) => {
     const dateRange = req.query.range || '7d';
     const deviceType = req.query.device; // optional filter
 
+    console.log('🔍 Activity feed request:', {
+      limit,
+      page,
+      activityType,
+      dateRange,
+      deviceType,
+      query: req.query
+    });
+
     // Calculate date range
     const days = parseInt(dateRange.replace('d', ''));
     const startDate = new Date();
@@ -259,14 +268,22 @@ router.get('/activity-feed', auth, async (req, res) => {
 
     const matchStage = { timestamp: { $gte: startDate } };
     if (activityType && activityType !== 'all') {
-      matchStage.activityType = activityType;
+      if (activityType === 'user_login' || activityType === 'user_register') {
+        matchStage.activityType = 'form_submission';
+        matchStage['formData.formType'] = activityType;
+      } else {
+        matchStage.activityType = activityType;
+      }
     }
     if (deviceType && deviceType !== 'all') {
       matchStage['deviceInfo.deviceType'] = deviceType;
     }
 
+    console.log('🔍 MongoDB match stage:', JSON.stringify(matchStage, null, 2));
+
     // Get total count for pagination
     const total = await UserActivity.countDocuments(matchStage);
+    console.log('📊 Total activities found:', total);
 
     // Calculate skip value for pagination
     const skip = (page - 1) * limit;
@@ -276,6 +293,14 @@ router.get('/activity-feed', auth, async (req, res) => {
       .skip(skip)
       .limit(limit)
       .lean();
+
+    console.log('📊 Activities retrieved:', activities.length);
+    console.log('📊 Activity types found:', [...new Set(activities.map(a => a.activityType))]);
+    console.log('📊 Form submission types found:', activities
+      .filter(a => a.activityType === 'form_submission')
+      .map(a => a.formData?.formType)
+      .filter(Boolean)
+    );
 
     // Get user details for non-anonymous users
     const userIds = activities
@@ -295,6 +320,8 @@ router.get('/activity-feed', auth, async (req, res) => {
           email: user.email
         };
       });
+      
+      console.log('📊 User details found for:', Object.keys(userDetails).length, 'users');
     }
 
     // Add user details to activities
@@ -308,6 +335,18 @@ router.get('/activity-feed', auth, async (req, res) => {
       };
     });
 
+    // Log some sample activities for debugging
+    if (activitiesWithUserDetails.length > 0) {
+      console.log('📊 Sample activities:');
+      activitiesWithUserDetails.slice(0, 3).forEach((activity, index) => {
+        console.log(`  ${index + 1}. ${activity.activityType} - ${activity.userInfo.name} - ${activity.timestamp}`);
+        if (activity.activityType === 'form_submission') {
+          console.log(`     Form type: ${activity.formData?.formType}`);
+          console.log(`     Fields:`, activity.formData?.fields);
+        }
+      });
+    }
+
     res.json({ 
       activities: activitiesWithUserDetails,
       total,
@@ -317,8 +356,98 @@ router.get('/activity-feed', auth, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error fetching activity feed:', error);
+    console.error('❌ Error fetching activity feed:', error);
     res.status(500).json({ error: 'Failed to fetch activity feed' });
+  }
+});
+
+// Get login activity statistics
+router.get('/login-stats', auth, async (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    console.log('🔍 Login stats request:', { days, startDate });
+
+    // Get login activities
+    const loginActivities = await UserActivity.aggregate([
+      { 
+        $match: { 
+          activityType: 'form_submission',
+          'formData.formType': 'user_login',
+          timestamp: { $gte: startDate } 
+        } 
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } }
+          },
+          count: { $sum: 1 },
+          uniqueUsers: { $addToSet: '$userId' }
+        }
+      },
+      {
+        $project: {
+          date: '$_id.date',
+          loginCount: '$count',
+          uniqueUsers: { $size: '$uniqueUsers' }
+        }
+      },
+      { $sort: { date: -1 } }
+    ]);
+
+    // Get total login count
+    const totalLogins = await UserActivity.countDocuments({
+      activityType: 'form_submission',
+      'formData.formType': 'user_login',
+      timestamp: { $gte: startDate }
+    });
+
+    // Get unique users who logged in
+    const uniqueLoginUsers = await UserActivity.distinct('userId', {
+      activityType: 'form_submission',
+      'formData.formType': 'user_login',
+      timestamp: { $gte: startDate }
+    });
+
+    // Get user details for non-anonymous login users
+    const nonAnonymousUserIds = uniqueLoginUsers.filter(id => id !== 'anonymous');
+    let loginUserDetails = [];
+    
+    if (nonAnonymousUserIds.length > 0) {
+      const users = await User.find({ _id: { $in: nonAnonymousUserIds } })
+        .select('name phone email lastActivity')
+        .lean();
+      
+      loginUserDetails = users.map(user => ({
+        id: user._id.toString(),
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        lastActivity: user.lastActivity
+      }));
+    }
+
+    console.log('📊 Login stats:', {
+      totalLogins,
+      uniqueLoginUsers: uniqueLoginUsers.length,
+      loginUserDetails: loginUserDetails.length,
+      dailyStats: loginActivities.length
+    });
+
+    res.json({
+      period: `${days} days`,
+      totalLogins,
+      uniqueLoginUsers: uniqueLoginUsers.length,
+      loginUserDetails,
+      dailyStats: loginActivities
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching login stats:', error);
+    res.status(500).json({ error: 'Failed to fetch login statistics' });
   }
 });
 

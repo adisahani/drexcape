@@ -108,6 +108,7 @@ export const API_ENDPOINTS = {
   // Analytics
   ANALYTICS_ACTIVITY_FEED: '/api/analytics/activity-feed',
   ANALYTICS_DASHBOARD: '/api/analytics/dashboard',
+  ANALYTICS_LOGIN_STATS: '/api/analytics/login-stats',
   ANALYTICS_EXPORT: '/api/analytics/export',
   
   // Place images
