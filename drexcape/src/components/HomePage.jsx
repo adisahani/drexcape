@@ -618,7 +618,6 @@ const HomePage = () => {
       {/* Special Offers */}
       <section className="special-offers" id="offers" ref={offersRef}>
         <div className="offer-banner glass gsap-fade-in">
-          <div className="offer-img" />
           <div className="offer-info">
             <h3>20% OFF</h3>
             <p>On all bookings till 28 September, 2025</p>
@@ -629,9 +628,19 @@ const HomePage = () => {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="powered-by">
-        <p>Powered by <span className="company-name">Dream Place Tour & Travels</span></p>
+      {/* Slim Glassy Footer */}
+      <footer className="slim-glassy-footer">
+        <p>
+          © 2025 All rights reserved.<br/> {' '}
+          <a 
+            href="https://getseenbranding.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="getseen-link"
+          >
+            Get Seen Branding
+          </a>
+        </p>
       </footer>
 
       {/* Promotional Popup */}
