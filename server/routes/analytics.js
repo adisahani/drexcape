@@ -398,6 +398,34 @@ router.get('/login-stats', auth, async (req, res) => {
       { $sort: { date: -1 } }
     ]);
 
+    // Get registration activities
+    const registrationActivities = await UserActivity.aggregate([
+      { 
+        $match: { 
+          activityType: 'form_submission',
+          'formData.formType': 'user_register',
+          timestamp: { $gte: startDate } 
+        } 
+      },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$timestamp' } }
+          },
+          count: { $sum: 1 },
+          uniqueUsers: { $addToSet: '$userId' }
+        }
+      },
+      {
+        $project: {
+          date: '$_id.date',
+          registrationCount: '$count',
+          uniqueUsers: { $size: '$uniqueUsers' }
+        }
+      },
+      { $sort: { date: -1 } }
+    ]);
+
     // Get total login count
     const totalLogins = await UserActivity.countDocuments({
       activityType: 'form_submission',
@@ -405,10 +433,24 @@ router.get('/login-stats', auth, async (req, res) => {
       timestamp: { $gte: startDate }
     });
 
+    // Get total registration count
+    const totalRegistrations = await UserActivity.countDocuments({
+      activityType: 'form_submission',
+      'formData.formType': 'user_register',
+      timestamp: { $gte: startDate }
+    });
+
     // Get unique users who logged in
     const uniqueLoginUsers = await UserActivity.distinct('userId', {
       activityType: 'form_submission',
       'formData.formType': 'user_login',
+      timestamp: { $gte: startDate }
+    });
+
+    // Get unique users who registered
+    const uniqueRegistrationUsers = await UserActivity.distinct('userId', {
+      activityType: 'form_submission',
+      'formData.formType': 'user_register',
       timestamp: { $gte: startDate }
     });
 
@@ -430,19 +472,45 @@ router.get('/login-stats', auth, async (req, res) => {
       }));
     }
 
+    // Get user details for non-anonymous registration users
+    const nonAnonymousRegistrationUserIds = uniqueRegistrationUsers.filter(id => id !== 'anonymous');
+    let registrationUserDetails = [];
+    
+    if (nonAnonymousRegistrationUserIds.length > 0) {
+      const users = await User.find({ _id: { $in: nonAnonymousRegistrationUserIds } })
+        .select('name phone email lastActivity')
+        .lean();
+      
+      registrationUserDetails = users.map(user => ({
+        id: user._id.toString(),
+        name: user.name,
+        phone: user.phone,
+        email: user.email,
+        lastActivity: user.lastActivity
+      }));
+    }
+
     console.log('📊 Login stats:', {
       totalLogins,
+      totalRegistrations,
       uniqueLoginUsers: uniqueLoginUsers.length,
+      uniqueRegistrationUsers: uniqueRegistrationUsers.length,
       loginUserDetails: loginUserDetails.length,
-      dailyStats: loginActivities.length
+      registrationUserDetails: registrationUserDetails.length,
+      dailyLoginStats: loginActivities.length,
+      dailyRegistrationStats: registrationActivities.length
     });
 
     res.json({
       period: `${days} days`,
       totalLogins,
+      totalRegistrations,
       uniqueLoginUsers: uniqueLoginUsers.length,
+      uniqueRegistrationUsers: uniqueRegistrationUsers.length,
       loginUserDetails,
-      dailyStats: loginActivities
+      registrationUserDetails,
+      dailyLoginStats: loginActivities,
+      dailyRegistrationStats: registrationActivities
     });
 
   } catch (error) {

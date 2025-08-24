@@ -104,6 +104,7 @@ export const API_ENDPOINTS = {
   PROMOTIONAL_LEADS_SUBMIT: '/api/promotional-leads/submit',
   PROMOTIONAL_LEADS_STATS: '/api/promotional-leads/stats',
   PROMOTIONAL_LEADS_STATUS: (id) => `/api/promotional-leads/${id}/status`,
+  PROMOTIONAL_LEADS_DELETE: (id) => `/api/promotional-leads/${id}`,
   
   // Analytics
   ANALYTICS_ACTIVITY_FEED: '/api/analytics/activity-feed',

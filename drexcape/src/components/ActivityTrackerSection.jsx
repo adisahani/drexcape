@@ -625,7 +625,8 @@ const ActivityTrackerSection = () => {
        )}
 
       {/* Login Activities Section */}
-      {loginStats.loginUserDetails && loginStats.loginUserDetails.length > 0 && (
+      {(loginStats.loginUserDetails && loginStats.loginUserDetails.length > 0) || 
+       (loginStats.registrationUserDetails && loginStats.registrationUserDetails.length > 0) ? (
         <Paper sx={{ 
           background: 'linear-gradient(135deg, #1a0033 0%, #3a006a 100%)',
           border: '1px solid rgba(255, 224, 102, 0.3)',
@@ -634,53 +635,113 @@ const ActivityTrackerSection = () => {
           <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 224, 102, 0.3)' }}>
             <Typography variant="h6" sx={{ color: '#ffe066', display: 'flex', alignItems: 'center', gap: 1 }}>
               <LoginIcon />
-              Recent User Logins ({loginStats.period})
+              User Authentication Activity ({loginStats.period})
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', mt: 1 }}>
-              Total Logins: {loginStats.totalLogins} | Unique Users: {loginStats.uniqueLoginUsers}
+              Logins: {loginStats.totalLogins} | Registrations: {loginStats.totalRegistrations} | 
+              Unique Login Users: {loginStats.uniqueLoginUsers} | Unique Registration Users: {loginStats.uniqueRegistrationUsers}
             </Typography>
           </Box>
           
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>User</TableCell>
-                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Phone</TableCell>
-                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Email</TableCell>
-                  <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Last Activity</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {loginStats.loginUserDetails.slice(0, 10).map((user) => (
-                  <TableRow key={user.id} sx={{ '&:hover': { backgroundColor: 'rgba(255, 224, 102, 0.1)' } }}>
-                    <TableCell sx={{ color: '#ffffff' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <PersonIcon sx={{ color: '#ffe066', fontSize: 20 }} />
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {user.name}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ color: '#ffffff' }}>
-                      {user.phone}
-                    </TableCell>
-                    <TableCell sx={{ color: '#ffffff' }}>
-                      {user.email || 'N/A'}
-                    </TableCell>
-                    <TableCell sx={{ color: '#ffffff' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AccessTimeIcon sx={{ color: '#ffe066', fontSize: 16 }} />
-                        {user.lastActivity ? formatDate(new Date(user.lastActivity)) : 'N/A'}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          {/* Login Users Table */}
+          {loginStats.loginUserDetails && loginStats.loginUserDetails.length > 0 && (
+            <>
+              <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 224, 102, 0.2)' }}>
+                <Typography variant="subtitle1" sx={{ color: '#ffe066' }}>
+                  🔐 Recent User Logins
+                </Typography>
+              </Box>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>User</TableCell>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Phone</TableCell>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Email</TableCell>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Last Activity</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loginStats.loginUserDetails.slice(0, 10).map((user) => (
+                      <TableRow key={user.id} sx={{ '&:hover': { backgroundColor: 'rgba(255, 224, 102, 0.1)' } }}>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <PersonIcon sx={{ color: '#ffe066', fontSize: 20 }} />
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                              {user.name}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          {user.phone}
+                        </TableCell>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          {user.email || 'N/A'}
+                        </TableCell>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AccessTimeIcon sx={{ color: '#ffe066', fontSize: 16 }} />
+                            {user.lastActivity ? formatDate(new Date(user.lastActivity)) : 'N/A'}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
+
+          {/* Registration Users Table */}
+          {loginStats.registrationUserDetails && loginStats.registrationUserDetails.length > 0 && (
+            <>
+              <Box sx={{ p: 2, borderBottom: '1px solid rgba(255, 224, 102, 0.2)' }}>
+                <Typography variant="subtitle1" sx={{ color: '#ffe066' }}>
+                  📝 Recent User Registrations
+                </Typography>
+              </Box>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>User</TableCell>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Phone</TableCell>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Email</TableCell>
+                      <TableCell sx={{ color: '#ffe066', fontWeight: 'bold' }}>Last Activity</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {loginStats.registrationUserDetails.slice(0, 10).map((user) => (
+                      <TableRow key={user.id} sx={{ '&:hover': { backgroundColor: 'rgba(255, 224, 102, 0.1)' } }}>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <PersonIcon sx={{ color: '#ffe066', fontSize: 20 }} />
+                            <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
+                              {user.name}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          {user.phone}
+                        </TableCell>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          {user.email || 'N/A'}
+                        </TableCell>
+                        <TableCell sx={{ color: '#ffffff' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <AccessTimeIcon sx={{ color: '#ffe066', fontSize: 16 }} />
+                            {user.lastActivity ? formatDate(new Date(user.lastActivity)) : 'N/A'}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
+          )}
         </Paper>
-      )}
+      ) : null}
 
       {/* Filter Dialog */}
       <Dialog 

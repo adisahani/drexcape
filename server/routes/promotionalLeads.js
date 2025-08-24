@@ -103,31 +103,39 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Get lead statistics (admin only)
+// Get promotional leads statistics
 router.get('/stats', auth, async (req, res) => {
   try {
-    const totalLeads = await PromotionalLead.countDocuments();
-    const newLeads = await PromotionalLead.countDocuments({ status: 'new' });
-    const contactedLeads = await PromotionalLead.countDocuments({ status: 'contacted' });
-    const convertedLeads = await PromotionalLead.countDocuments({ status: 'converted' });
-    
-    // Get leads from last 30 days
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    const recentLeads = await PromotionalLead.countDocuments({
-      submittedAt: { $gte: thirtyDaysAgo }
-    });
+    const days = parseInt(req.query.days) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+
+    const stats = await PromotionalLead.aggregate([
+      { $match: { submittedAt: { $gte: startDate } } },
+      {
+        $group: {
+          _id: {
+            date: { $dateToString: { format: '%Y-%m-%d', date: '$submittedAt' } }
+          },
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { '_id.date': -1 } }
+    ]);
+
+    const totalLeads = await PromotionalLead.countDocuments({ submittedAt: { $gte: startDate } });
+    const totalLeadsAllTime = await PromotionalLead.countDocuments();
 
     res.json({
-      total: totalLeads,
-      new: newLeads,
-      contacted: contactedLeads,
-      converted: convertedLeads,
-      recent: recentLeads
+      period: `${days} days`,
+      totalLeads,
+      totalLeadsAllTime,
+      dailyStats: stats
     });
+
   } catch (error) {
-    console.error('Error fetching lead stats:', error);
-    res.status(500).json({ error: 'Failed to fetch statistics' });
+    console.error('Error fetching promotional leads stats:', error);
+    res.status(500).json({ error: 'Failed to fetch promotional leads statistics' });
   }
 });
 
@@ -149,6 +157,35 @@ router.put('/:id/status', auth, async (req, res) => {
   } catch (error) {
     console.error('Error updating lead status:', error);
     res.status(500).json({ error: 'Failed to update lead' });
+  }
+});
+
+// Delete promotional lead
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const lead = await PromotionalLead.findById(id);
+    if (!lead) {
+      return res.status(404).json({ error: 'Promotional lead not found' });
+    }
+
+    await PromotionalLead.findByIdAndDelete(id);
+    
+    console.log(`🗑️ Deleted promotional lead: ${lead.name} (${lead.phone})`);
+    
+    res.json({ 
+      message: 'Promotional lead deleted successfully',
+      deletedLead: {
+        id: lead._id,
+        name: lead.name,
+        phone: lead.phone
+      }
+    });
+
+  } catch (error) {
+    console.error('Error deleting promotional lead:', error);
+    res.status(500).json({ error: 'Failed to delete promotional lead' });
   }
 });
 

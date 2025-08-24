@@ -38,6 +38,13 @@ router.post('/register', async (req, res) => {
     // Track form submission
     req.trackFormSubmission('user_registration', { name, phone, email }, 'api');
 
+    // Set session data for the newly registered user
+    req.session = req.session || {};
+    req.session.userId = user._id.toString();
+    req.session.userPhone = user.phone;
+
+    console.log('✅ User registration tracked successfully:', { name, phone, email });
+
     res.status(201).json({
       message: 'User registered successfully',
       token,

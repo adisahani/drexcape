@@ -34,7 +34,8 @@ import {
   ContactPhone as ContactPhoneIcon,
   CheckCircle as CheckCircleIcon,
   Cancel as CancelIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
@@ -45,6 +46,7 @@ const PromotionalLeadsSection = () => {
   const [error, setError] = useState('');
   const [editDialog, setEditDialog] = useState({ open: false, lead: null });
   const [editForm, setEditForm] = useState({ status: '', notes: '' });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, lead: null });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalLeads, setTotalLeads] = useState(0);
@@ -127,6 +129,32 @@ const PromotionalLeadsSection = () => {
     } catch (error) {
       console.error('Error updating lead:', error);
       setError('Failed to update lead');
+    }
+  };
+
+  const handleDeleteLead = (lead) => {
+    setDeleteDialog({ open: true, lead });
+  };
+
+  const confirmDeleteLead = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.PROMOTIONAL_LEADS_DELETE(deleteDialog.lead._id)), {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete lead');
+      
+      // Refresh data
+      fetchLeads();
+      fetchStats();
+      setDeleteDialog({ open: false, lead: null });
+    } catch (error) {
+      console.error('Error deleting lead:', error);
+      setError('Failed to delete lead');
     }
   };
 
@@ -296,14 +324,24 @@ const PromotionalLeadsSection = () => {
                     </Box>
                   </TableCell>
                   <TableCell>
-                    <Tooltip title="Edit Lead">
-                      <IconButton 
-                        onClick={() => handleEditLead(lead)}
-                        sx={{ color: '#ffe066' }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Tooltip title="Edit Lead">
+                        <IconButton 
+                          onClick={() => handleEditLead(lead)}
+                          sx={{ color: '#ffe066' }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete Lead">
+                        <IconButton 
+                          onClick={() => handleDeleteLead(lead)}
+                          sx={{ color: '#ff6b6b' }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -488,6 +526,64 @@ const PromotionalLeadsSection = () => {
             }}
           >
             Update Lead
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog 
+        open={deleteDialog.open} 
+        onClose={() => setDeleteDialog({ open: false, lead: null })}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          style: {
+            background: 'linear-gradient(135deg, #1a0033 0%, #3a006a 100%)',
+            border: '2px solid rgba(255, 224, 102, 0.3)'
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: '#ff6b6b' }}>
+          🗑️ Delete Lead
+        </DialogTitle>
+        <DialogContent sx={{ color: '#ffffff' }}>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete this promotional lead?
+          </Typography>
+          <Box sx={{ p: 2, background: 'rgba(255, 107, 107, 0.1)', borderRadius: 1, border: '1px solid rgba(255, 107, 107, 0.3)' }}>
+            <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#ff6b6b' }}>
+              {deleteDialog.lead?.name}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+              {deleteDialog.lead?.phone}
+            </Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
+              Submitted: {deleteDialog.lead?.submittedAt ? formatDate(deleteDialog.lead.submittedAt) : 'N/A'}
+            </Typography>
+          </Box>
+          <Typography variant="body2" sx={{ mt: 2, color: '#ff6b6b' }}>
+            ⚠️ This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setDeleteDialog({ open: false, lead: null })}
+            sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+          >
+            Cancel
+          </Button>
+          <Button 
+            onClick={confirmDeleteLead}
+            sx={{
+              background: 'linear-gradient(135deg, #ff6b6b, #ff5252)',
+              color: '#ffffff',
+              fontWeight: 'bold',
+              '&:hover': {
+                background: 'linear-gradient(135deg, #ff5252, #ff6b6b)',
+              }
+            }}
+          >
+            Delete Lead
           </Button>
         </DialogActions>
       </Dialog>
