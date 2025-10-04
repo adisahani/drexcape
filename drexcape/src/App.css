@@ -3059,9 +3059,7 @@ body {
 
 /* ===== SLIM GLASSY FOOTER ===== */
 .slim-glassy-footer {
-  position: fixed;
-  bottom: 10px;
-  left: 50%;
+   left: 50%;
   transform: translateX(-50%);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(10px);
