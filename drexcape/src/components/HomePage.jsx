@@ -632,14 +632,15 @@ const HomePage = () => {
       <footer className="slim-glassy-footer">
         <p>
           © 2025 All rights reserved.<br/> {' '}
-          <a 
+          {/* <a 
             href="https://getseenbranding.com" 
             target="_blank" 
             rel="noopener noreferrer"
             className="getseen-link"
-          >
-            Get Seen Branding
+          > 
           </a>
+          */}
+            Adi Sahani
         </p>
       </footer>
 
